@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-func BuildFullName(namespace, name, idnum string) string {
+//BuildFullName builds the full name of the table or inline table
+func BuildFullName(name, idnum string) string {
 	if idnum == "" {
-		return fmt.Sprintf("%s.%s", namespace, name)
-	} else {
-		return fmt.Sprintf("%s.%s.%s", namespace, name, idnum)
+		return fmt.Sprintf("%s", name)
 	}
+	return fmt.Sprintf("%s.%s", name, idnum)
 }

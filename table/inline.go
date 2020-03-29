@@ -16,13 +16,14 @@ const (
 	inlineSection = "Inline"
 )
 
-func (t *Table) validateInline(vr *util.ValidationResult) *util.ValidationResult {
+func (t *Table) validateInline(vr *util.ValidationResult) {
+
+	//ensure ID and content are both defined
 	for _, il := range t.Inline {
 		checkEmpty(il.ID, "ID", inlineSection, vr)
 		if len(il.Content) <= 0 {
 			vr.Fail(inlineSection, fmt.Sprintf("Inline table with id: %s is empty", il.ID))
 		}
-		il.fullyQualifiedName = util.BuildFullName(t.Definition.Namespace, t.Definition.Name, il.ID)
+		il.fullyQualifiedName = util.BuildFullName(t.Definition.Name, il.ID)
 	}
-	return vr
 }

@@ -11,20 +11,19 @@ const (
 
 //DefinitionPart holds the table definition or header
 type DefinitionPart struct {
-	Namespace  string `yaml:"namespace"`
 	Name       string `yaml:"name"`
 	TableType  string `yaml:"type"`
 	Roll       string `yaml:"roll"`
 	diceParsed []*diceParseResult
 }
 
-func (t *Table) validateDefinition(vr *util.ValidationResult) *util.ValidationResult {
-	checkEmpty(t.Definition.Namespace, "Namespace", definitionSection, vr)
+func (t *Table) validateDefinition(vr *util.ValidationResult) {
 	checkEmpty(t.Definition.Name, "Name", definitionSection, vr)
+	validIdentifier(t.Definition.Name, "Name", definitionSection, vr)
 	checkEmpty(t.Definition.TableType, "TableType", definitionSection, vr)
 
 	switch t.Definition.TableType {
-	case "flat", "weighted", "dictionary":
+	case "flat":
 		if t.Definition.Roll != "" {
 			vr.Warn(definitionSection, fmt.Sprintf("Roll defined but not used for this table type"))
 		}
@@ -42,6 +41,4 @@ func (t *Table) validateDefinition(vr *util.ValidationResult) *util.ValidationRe
 			t.Definition.diceParsed = parseResults
 		}
 	}
-
-	return vr
 }

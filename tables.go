@@ -37,7 +37,7 @@ func (cr *concreteTableRepo) Add(yamlBytes []byte) (*util.ValidationResult, erro
 	validationResults := table.Validate()
 
 	//store the table in the repo
-	fullName := util.BuildFullName(table.Definition.Namespace, table.Definition.Name, "")
+	fullName := util.BuildFullName(table.Definition.Name, "")
 	cr.tableData[fullName] = &table
 
 	return validationResults, nil

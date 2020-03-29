@@ -23,7 +23,7 @@ var (
 	fixedContentPattern = regexp.MustCompile("^\\{([0-9]+)\\}.*$")
 )
 
-func (t *Table) validateRangeContent(vr *util.ValidationResult) *util.ValidationResult {
+func (t *Table) validateRangeContent(vr *util.ValidationResult) {
 
 	//set up to store parsed ranged content
 	allContent := make([]*rangedContent, 0, 1)
@@ -69,7 +69,7 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) *util.Validation
 	}
 	t.rangeContent = allContent
 
-	//final check - make sure no ranges are out of order or overlap
+	//final validation - make sure no ranges are out of order or overlap
 	overlap := false
 	for i := 0; i < len(t.rangeContent)-1; i++ {
 		if t.rangeContent[i].High >= t.rangeContent[i+1].Low && !overlap {
@@ -77,6 +77,4 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) *util.Validation
 			overlap = true //supress similar failures
 		}
 	}
-
-	return vr
 }

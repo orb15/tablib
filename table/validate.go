@@ -15,12 +15,19 @@ type diceParseResult struct {
 }
 
 var (
-	xdyPattern = regexp.MustCompile("^([1-9][0-9]*)d([1-9][0-9]*)$")
+	xdyPattern             = regexp.MustCompile("^([1-9][0-9]*)d([1-9][0-9]*)$")
+	validIdentifierPattern = regexp.MustCompile("[A-Z][a-zA-Z0-9_]+")
 )
 
 func checkEmpty(stringVal, yamlName, section string, vr *util.ValidationResult) {
 	if stringVal == "" {
 		vr.Fail(section, fmt.Sprintf("Empty %s", yamlName))
+	}
+}
+
+func validIdentifier(stringVal, yamlName, section string, vr *util.ValidationResult) {
+	if !validIdentifierPattern.MatchString(stringVal) {
+		vr.Fail(section, fmt.Sprintf("Invalid identifier for %s: %s", yamlName, stringVal))
 	}
 }
 

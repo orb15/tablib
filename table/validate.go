@@ -16,7 +16,7 @@ type diceParseResult struct {
 
 var (
 	xdyPattern             = regexp.MustCompile("^([1-9][0-9]*)d([1-9][0-9]*)$")
-	validIdentifierPattern = regexp.MustCompile("[A-Z][a-zA-Z0-9_]+")
+	validIdentifierPattern = regexp.MustCompile("[A-Za-z][a-zA-Z0-9_]+")
 )
 
 func checkEmpty(stringVal, yamlName, section string, vr *util.ValidationResult) {

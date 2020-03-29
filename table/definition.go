@@ -23,7 +23,7 @@ func (t *Table) validateDefinition(vr *util.ValidationResult) {
 	checkEmpty(t.Definition.TableType, "TableType", definitionSection, vr)
 
 	switch t.Definition.TableType {
-	case "flat":
+	case "flat", "master":
 		if t.Definition.Roll != "" {
 			vr.Warn(definitionSection, fmt.Sprintf("Roll defined but not used for this table type"))
 		}

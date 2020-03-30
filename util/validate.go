@@ -1,6 +1,9 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 //ValidationResult holds table validation info
 type ValidationResult struct {
@@ -17,6 +20,38 @@ func (vr *ValidationResult) Fail(section, reason string) {
 
 //Warn indicates a validation warning
 func (vr *ValidationResult) Warn(section, reason string) {
-	vr.IsValid = false
+	vr.HasWarnings = true
 	vr.Errors = append(vr.Errors, fmt.Sprintf("WARN: %s - %s", section, reason))
+}
+
+//Valid returns true if table is valid (no errors)
+func (vr *ValidationResult) Valid() bool {
+	return vr.IsValid
+}
+
+//IssueCount provides the number of errors or warnings
+func (vr *ValidationResult) IssueCount() int {
+	return len(vr.Errors)
+}
+
+//ErrorCount provides the number of errors
+func (vr *ValidationResult) ErrorCount() int {
+	count := 0
+	for _, e := range vr.Errors {
+		if strings.HasPrefix(e, "ERROR") {
+			count++
+		}
+	}
+	return count
+}
+
+//WarnCount provides the number of warnings
+func (vr *ValidationResult) WarnCount() int {
+	count := 0
+	for _, e := range vr.Errors {
+		if strings.HasPrefix(e, "WARN") {
+			count++
+		}
+	}
+	return count
 }

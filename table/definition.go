@@ -18,12 +18,13 @@ type DefinitionPart struct {
 }
 
 func (t *Table) validateDefinition(vr *util.ValidationResult) {
-	checkEmpty(t.Definition.Name, "Name", definitionSection, vr)
 	validIdentifier(t.Definition.Name, "Name", definitionSection, vr)
 	checkEmpty(t.Definition.TableType, "TableType", definitionSection, vr)
 
+	//ensure valid table type, ensure alignment between table type and roll
+	//information
 	switch t.Definition.TableType {
-	case "flat", "master":
+	case "flat":
 		if t.Definition.Roll != "" {
 			vr.Warn(definitionSection, fmt.Sprintf("Roll defined but not used for this table type"))
 		}

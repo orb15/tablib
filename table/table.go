@@ -15,7 +15,7 @@ type Table struct {
 	Inline     []*InlinePart   `yaml:"inline"`
 
 	IsValid      bool
-	rangeContent []*rangedContent
+	RangeContent []*rangedContent
 }
 
 var (

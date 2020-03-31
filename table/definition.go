@@ -11,10 +11,12 @@ const (
 
 //DefinitionPart holds the table definition or header
 type DefinitionPart struct {
-	Name       string `yaml:"name"`
-	TableType  string `yaml:"type"`
-	Roll       string `yaml:"roll"`
-	diceParsed []*diceParseResult
+	Name      string `yaml:"name"`
+	Note      string `yaml:"note"`
+	TableType string `yaml:"type"`
+	Roll      string `yaml:"roll"`
+
+	DiceParsed []*diceParseResult
 }
 
 func (t *Table) validateDefinition(vr *util.ValidationResult) {
@@ -39,7 +41,7 @@ func (t *Table) validateDefinition(vr *util.ValidationResult) {
 	if t.Definition.Roll != "" {
 		parseResults := checkDice(t.Definition.Roll, definitionSection, vr)
 		if parseResults != nil {
-			t.Definition.diceParsed = parseResults
+			t.Definition.DiceParsed = parseResults
 		}
 	}
 }

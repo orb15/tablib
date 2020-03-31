@@ -19,8 +19,8 @@ const (
 )
 
 var (
-	rangeContentPattern = regexp.MustCompile("^\\{([0-9]+)-([0-9]+)\\}.*$")
-	fixedContentPattern = regexp.MustCompile("^\\{([0-9]+)\\}.*$")
+	rangedContentPattern = regexp.MustCompile("^\\{([0-9]+)-([0-9]+)\\}.*$")
+	fixedContentPattern  = regexp.MustCompile("^\\{([0-9]+)\\}.*$")
 )
 
 func (t *Table) validateRangeContent(vr *util.ValidationResult) {
@@ -29,8 +29,8 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) {
 	allContent := make([]*rangedContent, 0, 1)
 
 	for _, rc := range t.RawContent {
-		if rangeContentPattern.MatchString(rc) { //{x-y}
-			matches := rangeContentPattern.FindStringSubmatch(rc)
+		if rangedContentPattern.MatchString(rc) { //{x-y}
+			matches := rangedContentPattern.FindStringSubmatch(rc)
 			lowVal, err := strconv.Atoi(matches[1])
 			if err != nil {
 				vr.Fail(contentSection, fmt.Sprintf("Programming error: unable to parse low portion of range that should be pre-validated: %s!", rc))
@@ -67,12 +67,12 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) {
 		}
 
 	}
-	t.rangeContent = allContent
+	t.RangeContent = allContent
 
 	//final validation - make sure no ranges are out of order or overlap
 	overlap := false
-	for i := 0; i < len(t.rangeContent)-1; i++ {
-		if t.rangeContent[i].High >= t.rangeContent[i+1].Low && !overlap {
+	for i := 0; i < len(t.RangeContent)-1; i++ {
+		if t.RangeContent[i].High >= t.RangeContent[i+1].Low && !overlap {
 			vr.Fail(contentSection, "this table has a range overlap or ordering issue")
 			overlap = true //supress similar failures
 		}

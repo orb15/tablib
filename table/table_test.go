@@ -13,6 +13,7 @@ func TestTable_shouldAcceptWellformedFlatTable(t *testing.T) {
   definition:
     name: TestTable_Flat
     type: flat
+    note: this is an optional note
   content:
     - item 1
     - item 2
@@ -643,13 +644,82 @@ func TestTable_shouldConvertRangedTableToInternalFormat(t *testing.T) {
 	vr := tb.Validate()
 	failOnErrors(vr, t)
 
-	equals(len(tb.rangeContent), 4, t)
-	equals(tb.rangeContent[1].Low, 3, t)
-	equals(tb.rangeContent[1].High, 4, t)
-	equals(tb.rangeContent[1].Content, "item 2 is {@SomeTable}", t)
-	equals(tb.rangeContent[3].Low, 6, t)
-	equals(tb.rangeContent[3].High, 6, t)
-	equals(tb.rangeContent[3].Content, "item 4", t)
+	equals(len(tb.RangeContent), 4, t)
+	equals(tb.RangeContent[1].Low, 3, t)
+	equals(tb.RangeContent[1].High, 4, t)
+	equals(tb.RangeContent[1].Content, "item 2 is {@SomeTable}", t)
+	equals(tb.RangeContent[3].Low, 6, t)
+	equals(tb.RangeContent[3].High, 6, t)
+	equals(tb.RangeContent[3].Content, "item 4", t)
+}
+
+func TestTable_shouldConvertDiceToInternalFormat1(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable
+    type: range
+    roll: 1d6
+  content:
+    - '{1-2}item 1'
+    - '{3-4}item 2 is {@SomeTable}'
+    - '{5}item 3'
+    - '{6}item 4'`
+
+	tb := tableFromYaml(yml, t)
+	vr := tb.Validate()
+	failOnErrors(vr, t)
+
+	equals(len(tb.Definition.DiceParsed), 1, t)
+	equals(tb.Definition.DiceParsed[0].Count, 1, t)
+	equals(tb.Definition.DiceParsed[0].DieType, 6, t)
+	equals(tb.Definition.DiceParsed[0].Operator, "none", t)
+}
+
+func TestTable_shouldConvertDiceToInternalFormat2(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable
+    type: range
+    roll: 3d12
+  content:
+    - '{1-2}item 1'
+    - '{3-4}item 2 is {@SomeTable}'
+    - '{5}item 3'
+    - '{6}item 4'`
+
+	tb := tableFromYaml(yml, t)
+	vr := tb.Validate()
+	failOnErrors(vr, t)
+
+	equals(len(tb.Definition.DiceParsed), 1, t)
+	equals(tb.Definition.DiceParsed[0].Count, 3, t)
+	equals(tb.Definition.DiceParsed[0].DieType, 12, t)
+	equals(tb.Definition.DiceParsed[0].Operator, "none", t)
+}
+
+func TestTable_shouldConvertDiceToInternalFormat3(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable
+    type: range
+    roll: 1d6 + 1d8
+  content:
+    - '{1-2}item 1'
+    - '{3-4}item 2 is {@SomeTable}'
+    - '{5}item 3'
+    - '{6}item 4'`
+
+	tb := tableFromYaml(yml, t)
+	vr := tb.Validate()
+	failOnErrors(vr, t)
+
+	equals(len(tb.Definition.DiceParsed), 2, t)
+	equals(tb.Definition.DiceParsed[0].Count, 1, t)
+	equals(tb.Definition.DiceParsed[0].DieType, 6, t)
+	equals(tb.Definition.DiceParsed[0].Operator, "+", t)
+	equals(tb.Definition.DiceParsed[1].Count, 1, t)
+	equals(tb.Definition.DiceParsed[1].DieType, 8, t)
+	equals(tb.Definition.DiceParsed[1].Operator, "none", t)
 }
 
 func TestTable_shouldConvertInlineTableToInternalFormat(t *testing.T) {
@@ -676,7 +746,7 @@ func TestTable_shouldConvertInlineTableToInternalFormat(t *testing.T) {
 
 	equals(len(tb.Inline), 2, t)
 	equals(tb.Inline[1].ID, "2", t)
-	equals(tb.Inline[1].fullyQualifiedName, "TestTable_Flat.2", t)
+	equals(tb.Inline[1].FullyQualifiedName, "TestTable_Flat.2", t)
 	equals(len(tb.Inline[1].Content), 2, t)
 	equals(tb.Inline[1].Content[0], "foo", t)
 	equals(tb.Inline[1].Content[1], "bar", t)

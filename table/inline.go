@@ -8,9 +8,10 @@ import (
 
 //InlinePart holds info about an inline table
 type InlinePart struct {
-	ID                 string   `yaml:"id"`
-	Content            []string `yaml:"content"`
-	fullyQualifiedName string
+	ID      string   `yaml:"id"`
+	Content []string `yaml:"content"`
+
+	FullyQualifiedName string
 }
 
 const (
@@ -33,6 +34,6 @@ func (t *Table) validateInline(vr *util.ValidationResult) {
 		if len(il.Content) <= 0 {
 			vr.Fail(inlineSection, fmt.Sprintf("Inline table with id: %s is empty", il.ID))
 		}
-		il.fullyQualifiedName = util.BuildFullName(t.Definition.Name, il.ID)
+		il.FullyQualifiedName = util.BuildFullName(t.Definition.Name, il.ID)
 	}
 }

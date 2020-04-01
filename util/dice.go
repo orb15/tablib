@@ -11,7 +11,7 @@ import (
 type DiceParseResult struct {
 	Count    int
 	DieType  int
-	Operator string // "+" or "-" or "none"
+	Operator string // "+" or "-" or "*" or "none"
 }
 
 var (

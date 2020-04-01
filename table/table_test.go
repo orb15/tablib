@@ -290,22 +290,6 @@ func TestTable_shouldRejectDice5(t *testing.T) {
   definition:
     name: TestTable
     type: range
-    roll: 1d6 * 1d12
-  content:
-    - '{1-2}item 1'
-    - '{3-4}item 2'
-    - '{5-6}item 3'`
-
-	vr := validateFromYaml(yml, t)
-	failOnNoErrors(vr, t)
-	equals(vr.ErrorCount(), 1, t)
-}
-
-func TestTable_shouldRejectDice6(t *testing.T) {
-	yml := `
-  definition:
-    name: TestTable
-    type: range
     roll: d6
   content:
     - '{1-2}item 1'

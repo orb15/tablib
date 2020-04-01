@@ -20,7 +20,7 @@ const (
 
 func (t *Table) validateInline(vr *util.ValidationResult) {
 
-	//ensure ID and content are both defined
+	//ensure ID and content are both defined for each inline table
 	for _, il := range t.Inline {
 		util.IsNotEmpty(il.ID, "ID", inlineSection, vr)
 		idVal, err := strconv.Atoi(il.ID)

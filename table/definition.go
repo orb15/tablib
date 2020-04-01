@@ -38,6 +38,7 @@ func (t *Table) validateDefinition(vr *util.ValidationResult) {
 		vr.Fail(definitionSection, fmt.Sprintf("Unknown TableType: %s", t.Definition.TableType))
 	}
 
+	//if a roll is provided, make sure it is valid
 	if t.Definition.Roll != "" {
 		parseResults := util.ValidateDiceExpr(t.Definition.Roll, definitionSection, vr)
 		if parseResults != nil {

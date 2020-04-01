@@ -24,14 +24,15 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*util.ValidationResult,
 	//apart to do the validation anyway
 	validationResults := table.Validate()
 
-	//by definition, tables that arrive here are not inline TableRepository
+	//by definition, tables that arrive here are not inline tables
 	table.IsInlineTable = false
 
 	//store the table in the repo
 	fullName := util.BuildFullName(table.Definition.Name, "")
 	cr.tableData[fullName] = table
 
-	//if the table has any line tables, add these as well
+	//if the table has any inline tables, add these as well - inline
+	//tables will be first-class 'flat' tables now
 	if len(table.Inline) > 0 {
 		inlines := extractInlineTables(table)
 		for _, ilt := range inlines {
@@ -46,6 +47,7 @@ func (cr *concreteTableRepo) List(searchExpr string) ([]*ListResponse, error) {
 	return nil, nil
 }
 
+//for each inline table in a table, create a full-featured table
 func extractInlineTables(mainTable *table.Table) []*table.Table {
 	inlinesAsTables := make([]*table.Table, len(mainTable.Inline))
 	for _, ilt := range mainTable.Inline {

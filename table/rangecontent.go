@@ -31,14 +31,8 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) {
 	for _, rc := range t.RawContent {
 		if rangedContentPattern.MatchString(rc) { //{x-y}
 			matches := rangedContentPattern.FindStringSubmatch(rc)
-			lowVal, err := strconv.Atoi(matches[1])
-			if err != nil {
-				vr.Fail(contentSection, fmt.Sprintf("Programming error: unable to parse low portion of range that should be pre-validated: %s!", rc))
-			}
-			highVal, err := strconv.Atoi(matches[2])
-			if err != nil {
-				vr.Fail(contentSection, fmt.Sprintf("Programming error: unable to parse high portion of range that should be pre-validated: %s!", rc))
-			}
+			lowVal, _ := strconv.Atoi(matches[1])  //no err, regex protects this
+			highVal, _ := strconv.Atoi(matches[2]) //no err, regex protects this
 			if lowVal >= highVal {
 				vr.Fail(contentSection, fmt.Sprintf("Invalid range: %d greater or equal to %d", lowVal, highVal))
 			}
@@ -49,12 +43,9 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) {
 				Content: splitStrings[1],
 			}
 			allContent = append(allContent, rgCont)
-		} else if fixedContentPattern.MatchString(rc) { //{x}}
+		} else if fixedContentPattern.MatchString(rc) { // range of a single value eg {x}}
 			matches := fixedContentPattern.FindStringSubmatch(rc)
-			onlyVal, err := strconv.Atoi(matches[1])
-			if err != nil {
-				vr.Fail(contentSection, fmt.Sprintf("Programming error: unable to parse single-valued range that should be pre-validated: %s!", rc))
-			}
+			onlyVal, _ := strconv.Atoi(matches[1]) //no err, regex protects this
 			splitStrings := strings.SplitAfterN(rc, "}", 2)
 			rgCont := &rangedContent{
 				Low:     onlyVal,
@@ -74,7 +65,7 @@ func (t *Table) validateRangeContent(vr *util.ValidationResult) {
 	for i := 0; i < len(t.RangeContent)-1; i++ {
 		if t.RangeContent[i].High >= t.RangeContent[i+1].Low && !overlap {
 			vr.Fail(contentSection, "this table has a range overlap or ordering issue")
-			overlap = true //supress similar failures
+			overlap = true //supress similar failures - out of order will cause a mess
 		}
 	}
 }

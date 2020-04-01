@@ -16,12 +16,12 @@ type DefinitionPart struct {
 	TableType string `yaml:"type"`
 	Roll      string `yaml:"roll"`
 
-	DiceParsed []*diceParseResult
+	DiceParsed []*util.DiceParseResult
 }
 
 func (t *Table) validateDefinition(vr *util.ValidationResult) {
-	validIdentifier(t.Definition.Name, "Name", definitionSection, vr)
-	checkEmpty(t.Definition.TableType, "TableType", definitionSection, vr)
+	util.IsValidIdentifier(t.Definition.Name, "Name", definitionSection, vr)
+	util.IsNotEmpty(t.Definition.TableType, "TableType", definitionSection, vr)
 
 	//ensure valid table type, ensure alignment between table type and roll
 	//information
@@ -39,7 +39,7 @@ func (t *Table) validateDefinition(vr *util.ValidationResult) {
 	}
 
 	if t.Definition.Roll != "" {
-		parseResults := checkDice(t.Definition.Roll, definitionSection, vr)
+		parseResults := util.ValidateDiceExpr(t.Definition.Roll, definitionSection, vr)
 		if parseResults != nil {
 			t.Definition.DiceParsed = parseResults
 		}

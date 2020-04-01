@@ -7,7 +7,7 @@ import (
 
 //TableRepository is a TableRepository for now
 type TableRepository interface {
-	Add(yamlBytes []byte) (*util.ValidationResult, error)
+	AddTable(yamlBytes []byte) (*util.ValidationResult, error)
 	List(searchExpr string) ([]*ListResponse, error)
 }
 

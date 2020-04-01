@@ -11,8 +11,8 @@ type concreteTableRepo struct {
 	tableData map[string]*table.Table
 }
 
-func (cr *concreteTableRepo) Add(yamlBytes []byte) (*util.ValidationResult, error) {
-	var table table.Table
+func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*util.ValidationResult, error) {
+	var table *table.Table
 
 	//is this even valid YAML?
 	err := yaml.Unmarshal(yamlBytes, &table)
@@ -24,13 +24,16 @@ func (cr *concreteTableRepo) Add(yamlBytes []byte) (*util.ValidationResult, erro
 	//apart to do the validation anyway
 	validationResults := table.Validate()
 
+	//by definition, tables that arrive here are not inline TableRepository
+	table.IsInlineTable = false
+
 	//store the table in the repo
 	fullName := util.BuildFullName(table.Definition.Name, "")
-	cr.tableData[fullName] = &table
+	cr.tableData[fullName] = table
 
 	//if the table has any line tables, add these as well
 	if len(table.Inline) > 0 {
-		inlines := extractInlineTables(&table)
+		inlines := extractInlineTables(table)
 		for _, ilt := range inlines {
 			cr.tableData[ilt.Definition.Name] = ilt
 		}
@@ -58,9 +61,10 @@ func extractInlineTables(mainTable *table.Table) []*table.Table {
 		}
 
 		tbl := &table.Table{
-			Definition: def,
-			RawContent: content,
-			IsValid:    true,
+			Definition:    def,
+			RawContent:    content,
+			IsValid:       true,
+			IsInlineTable: true,
 		}
 		inlinesAsTables = append(inlinesAsTables, tbl)
 	}

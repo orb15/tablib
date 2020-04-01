@@ -14,8 +14,9 @@ type Table struct {
 	RawContent []string        `yaml:"content"`
 	Inline     []*InlinePart   `yaml:"inline"`
 
-	IsValid      bool
-	RangeContent []*rangedContent
+	IsValid       bool
+	IsInlineTable bool
+	RangeContent  []*rangedContent
 }
 
 var (
@@ -25,11 +26,7 @@ var (
 //Validate ensures the table is valid and parses some aspects if it makes
 //sense to do so at validation
 func (t *Table) Validate() *util.ValidationResult {
-	vr := &util.ValidationResult{
-		IsValid:     true,
-		HasWarnings: false,
-		Errors:      make([]string, 0),
-	}
+	vr := util.NewValidationResult()
 
 	//validate and parse defintion
 	t.validateDefinition(vr)

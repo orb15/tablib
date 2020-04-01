@@ -1,37 +1,25 @@
-package table
+package util
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
-	"tablib/util"
 )
 
-type diceParseResult struct {
+//DiceParseResult holds a result of parsing a Dice expression
+type DiceParseResult struct {
 	Count    int
 	DieType  int
 	Operator string // "+" or "-" or "none"
 }
 
 var (
-	xdyPattern             = regexp.MustCompile("^([1-9][0-9]*)d([1-9][0-9]*)$")
-	validIdentifierPattern = regexp.MustCompile("^[A-Za-z][a-zA-Z0-9_]+$")
+	xdyPattern = regexp.MustCompile("^([1-9][0-9]*)d([1-9][0-9]*)$")
 )
 
-func checkEmpty(stringVal, yamlName, section string, vr *util.ValidationResult) {
-	if stringVal == "" {
-		vr.Fail(section, fmt.Sprintf("Empty %s", yamlName))
-	}
-}
-
-func validIdentifier(stringVal, yamlName, section string, vr *util.ValidationResult) {
-	if !validIdentifierPattern.MatchString(stringVal) {
-		vr.Fail(section, fmt.Sprintf("Invalid identifier for %s: %s", yamlName, stringVal))
-	}
-}
-
-func checkDice(diceExpr, section string, vr *util.ValidationResult) []*diceParseResult {
+//ValidateDiceExpr validates and parses a dice expression
+func ValidateDiceExpr(diceExpr, section string, vr *ValidationResult) []*DiceParseResult {
 
 	//safety - should have been checked before this wass called
 	if diceExpr == "" {
@@ -39,7 +27,7 @@ func checkDice(diceExpr, section string, vr *util.ValidationResult) []*diceParse
 		return nil
 	}
 
-	parseResults := make([]*diceParseResult, 0, 1)
+	parseResults := make([]*DiceParseResult, 0, 1)
 	components := strings.Split(diceExpr, " ")
 
 	//check that the length of components is always odd eg xdy or xdy +- mdn
@@ -64,7 +52,7 @@ func checkDice(diceExpr, section string, vr *util.ValidationResult) []*diceParse
 				vr.Fail(section, fmt.Sprintf("Programming error: unable to parse dietype portion of dice that should be pre-validated: %s!", diceExpr))
 				return nil
 			}
-			pr := &diceParseResult{
+			pr := &DiceParseResult{
 				Count:   count,
 				DieType: dieType,
 			}

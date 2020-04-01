@@ -12,6 +12,16 @@ type ValidationResult struct {
 	Errors      []string
 }
 
+//NewValidationResult does what is says on the tin
+func NewValidationResult() *ValidationResult {
+	vr := &ValidationResult{
+		IsValid:     true,
+		HasWarnings: false,
+		Errors:      make([]string, 0),
+	}
+	return vr
+}
+
 //Fail indicates a validation failure
 func (vr *ValidationResult) Fail(section, reason string) {
 	vr.IsValid = false

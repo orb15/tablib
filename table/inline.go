@@ -22,7 +22,7 @@ func (t *Table) validateInline(vr *util.ValidationResult) {
 
 	//ensure ID and content are both defined
 	for _, il := range t.Inline {
-		checkEmpty(il.ID, "ID", inlineSection, vr)
+		util.IsNotEmpty(il.ID, "ID", inlineSection, vr)
 		idVal, err := strconv.Atoi(il.ID)
 		if err != nil {
 			vr.Fail(inlineSection, fmt.Sprintf("Invalid ID for Inline table: %s", il.ID))

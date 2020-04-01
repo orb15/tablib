@@ -32,6 +32,9 @@ func (t *Table) Validate() *validate.ValidationResult {
 	t.validateDefinition(vr)
 
 	//validate and parse content section
+	if len(t.RawContent) == 0 {
+		vr.Fail(contentSection, "A table must have content")
+	}
 	switch t.Definition.TableType {
 	case "range":
 		t.validateRangeContent(vr)

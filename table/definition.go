@@ -18,7 +18,7 @@ type DefinitionPart struct {
 	TableType string `yaml:"type"`
 	Roll      string `yaml:"roll"`
 
-	DiceParsed []*dice.DiceParseResult
+	DiceParsed []*dice.ParseResult
 }
 
 func (t *Table) validateDefinition(vr *validate.ValidationResult) {

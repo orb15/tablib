@@ -22,7 +22,7 @@ func TestValidateDiceExpr_shouldAcceptValidDice(t *testing.T) {
 func TestValidateDiceExpr_shouldRejectInvalidDice(t *testing.T) {
 
 	var ids = []string{"", "0d6", "1d0", "3d6 / 4d8", "d6", "7d", "3d6 +",
-		"3d6 2d6", "3d6 + 3 + 2d8", "2 + 1d6", "1d6+8", "3d0 + 3"}
+		"3d6 2d6", "3d6 + 3 + 2d8", "2 + 1d6", "1d6+8", "3d0 + 3", "2d6 + 1 * 2"}
 
 	for _, id := range ids {
 		vr := validate.NewValidationResult()

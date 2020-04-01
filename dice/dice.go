@@ -8,8 +8,8 @@ import (
 	"tablib/validate"
 )
 
-//DiceParseResult holds a result of parsing a Dice expression
-type DiceParseResult struct {
+//ParseResult holds a result of parsing a Dice expression
+type ParseResult struct {
 	Count    int
 	DieType  int
 	Operator string // "+" or "-" or "*" or "none"
@@ -21,7 +21,7 @@ var (
 )
 
 //ValidateDiceExpr validates and parses a dice expression
-func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) []*DiceParseResult {
+func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) []*ParseResult {
 
 	//safety - should have been checked before this was called
 	if diceExpr == "" {
@@ -29,7 +29,7 @@ func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) [
 		return nil
 	}
 
-	parseResults := make([]*DiceParseResult, 0, 1)
+	parseResults := make([]*ParseResult, 0, 1)
 	components := strings.Split(diceExpr, " ")
 
 	//check that the length of components is always odd eg xdy or xdy +- mdn
@@ -47,7 +47,7 @@ func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) [
 		//if we do, we want to consume that specially
 		if intPattern.MatchString(components[0]) {
 			constant, _ := strconv.Atoi(components[0]) //no err here as regex protects
-			pr := &DiceParseResult{
+			pr := &ParseResult{
 				Count:    constant,
 				DieType:  0,
 				Operator: "none",
@@ -62,7 +62,7 @@ func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) [
 			matches := xdyPattern.FindStringSubmatch(components[0])
 			count, _ := strconv.Atoi(matches[1])   //no err here as regex protects
 			dieType, _ := strconv.Atoi(matches[2]) //no err here as regex protects
-			pr := &DiceParseResult{
+			pr := &ParseResult{
 				Count:   count,
 				DieType: dieType,
 			}

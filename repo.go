@@ -1,6 +1,7 @@
 package tablib
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"tablib/table"
@@ -112,15 +113,26 @@ func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*Sear
 	defer cr.lock.Unlock()
 	return make([]*SearchResult, 0)
 }
-func (cr *concreteTableRepo) Roll(tableName string, count int) *tableresult.TableResult {
+func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresult.TableResult {
 	cr.lock.RLock()
 	defer cr.lock.Unlock()
 
 	tr := tableresult.NewTableResult()
-	_, found := cr.tableStore[tableName]
+	tbl, found := cr.tableStore[tableName]
 	if !found {
-
+		tr.AddLog(fmt.Sprintf("Table: %s does not exist", tableName))
+		return tr
 	}
+
+	wp := &workPackage{
+		repo:      cr,
+		table:     tbl.parsedTable,
+		script:    nil,
+		operation: "roll",
+		count:     execsDesired,
+	}
+	exeng := newExecutionEngine()
+	exeng.execute(wp, tr)
 	return tr
 }
 func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.TableResult {

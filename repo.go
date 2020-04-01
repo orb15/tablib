@@ -1,17 +1,37 @@
 package tablib
 
 import (
+	"strings"
+	"sync"
 	"tablib/table"
 	"tablib/util"
+
+	lua "github.com/yuin/gopher-lua"
+	"github.com/yuin/gopher-lua/parse"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
+type tableData struct {
+	yamlSource  string
+	parsedTable *table.Table
+}
+
+type scriptData struct {
+	scriptSource string
+	parsedScript *lua.FunctionProto
+}
+
 type concreteTableRepo struct {
-	tableData map[string]*table.Table
+	tableStore  map[string]*tableData
+	scriptStore map[string]*scriptData
+	lock        *sync.RWMutex
 }
 
 func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*util.ValidationResult, error) {
+	cr.lock.Lock()
+	defer cr.lock.Unlock()
+
 	var table *table.Table
 
 	//is this even valid YAML?
@@ -29,22 +49,73 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*util.ValidationResult,
 
 	//store the table in the repo
 	fullName := util.BuildFullName(table.Definition.Name, "")
-	cr.tableData[fullName] = table
+	cr.tableStore[fullName] = &tableData{
+		yamlSource:  string(yamlBytes),
+		parsedTable: table,
+	}
 
 	//if the table has any inline tables, add these as well - inline
 	//tables will be first-class 'flat' tables now
 	if len(table.Inline) > 0 {
 		inlines := extractInlineTables(table)
 		for _, ilt := range inlines {
-			cr.tableData[ilt.Definition.Name] = ilt
+			cr.tableStore[ilt.Definition.Name] = &tableData{
+				yamlSource:  "",
+				parsedTable: ilt,
+			}
 		}
 	}
 
 	return validationResults, nil
 }
 
-func (cr *concreteTableRepo) List(searchExpr string) ([]*ListResponse, error) {
-	return nil, nil
+func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string) error {
+	cr.lock.Lock()
+	defer cr.lock.Unlock()
+
+	//read and compile the lua script
+	reader := strings.NewReader(luaScript)
+	astStatements, err := parse.Parse(reader, luaScript)
+	if err != nil {
+		return err
+	}
+	proto, err := lua.Compile(astStatements, luaScript)
+	if err != nil {
+		return err
+	}
+
+	//store the Lua script bytecode in the repo
+	cr.scriptStore[scriptName] = &scriptData{
+		scriptSource: luaScript,
+		parsedScript: proto,
+	}
+	return nil
+}
+
+func (cr *concreteTableRepo) List(objectName string) (string, error) {
+	cr.lock.RLock()
+	defer cr.lock.Unlock()
+	return "", nil
+}
+func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*SearchResult {
+	cr.lock.RLock()
+	defer cr.lock.Unlock()
+	return make([]*SearchResult, 0)
+}
+func (cr *concreteTableRepo) Roll(tableName string, count int) *TableResult {
+	cr.lock.RLock()
+	defer cr.lock.Unlock()
+	return nil
+}
+func (cr *concreteTableRepo) Pick(tableName string, count int) *TableResult {
+	cr.lock.RLock()
+	defer cr.lock.Unlock()
+	return nil
+}
+func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, error) {
+	cr.lock.RLock()
+	defer cr.lock.Unlock()
+	return make(map[string]string), nil
 }
 
 //for each inline table in a table, create a full-featured table

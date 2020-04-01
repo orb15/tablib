@@ -31,8 +31,8 @@ type concreteTableRepo struct {
 }
 
 func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationResult, error) {
-	cr.lock.Lock()
-	defer cr.lock.Unlock()
+
+	//not locking repo here so parse + validate can be multithreaded if caller desires
 
 	var table *table.Table
 
@@ -48,6 +48,10 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationRes
 
 	//by definition, tables that arrive here are not inline tables
 	table.IsInlineTable = false
+
+	//lock the repo now since we will write to it
+	cr.lock.Lock()
+	defer cr.lock.Unlock()
 
 	//store the table in the repo
 	fullName := util.BuildFullName(table.Definition.Name, "")
@@ -72,8 +76,8 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationRes
 }
 
 func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string) error {
-	cr.lock.Lock()
-	defer cr.lock.Unlock()
+
+	//not locking repo here so compilation can be multithreaded if caller desires
 
 	//read and compile the lua script
 	reader := strings.NewReader(luaScript)
@@ -85,6 +89,10 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string) error {
 	if err != nil {
 		return err
 	}
+
+	//lock the repo now since we will write to it
+	cr.lock.Lock()
+	defer cr.lock.Unlock()
 
 	//store the Lua script bytecode in the repo
 	cr.scriptStore[scriptName] = &scriptData{

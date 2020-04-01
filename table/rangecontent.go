@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"tablib/util"
+	"tablib/validate"
 )
 
 type rangedContent struct {
@@ -23,7 +23,7 @@ var (
 	fixedContentPattern  = regexp.MustCompile("^\\{([0-9]+)\\}.*$")
 )
 
-func (t *Table) validateRangeContent(vr *util.ValidationResult) {
+func (t *Table) validateRangeContent(vr *validate.ValidationResult) {
 
 	//set up to store parsed ranged content
 	allContent := make([]*rangedContent, 0, 1)

@@ -2,17 +2,18 @@ package tablib
 
 import (
 	"sync"
-	"tablib/util"
+	"tablib/tableresult"
+	"tablib/validate"
 )
 
 //TableRepository is a TableRepository for now
 type TableRepository interface {
 	AddLuaScript(scriptName, luaScript string) error
-	AddTable(yamlBytes []byte) (*util.ValidationResult, error)
+	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
 	Execute(scriptName string) (map[string]string, error)
 	List(objectName string) (string, error)
-	Pick(tableName string, count int) *TableResult
-	Roll(tableName string, count int) *TableResult
+	Pick(tableName string, count int) *tableresult.TableResult
+	Roll(tableName string, count int) *tableresult.TableResult
 	Search(namePredicate string, tags []string) []*SearchResult
 }
 
@@ -21,12 +22,6 @@ type SearchResult struct {
 	Name string
 	Type string
 	Tags []string
-}
-
-//TableResult holds the final result of a table run
-type TableResult struct {
-	Result string
-	Log    []string
 }
 
 //NewTableRepository does what it says on the tin

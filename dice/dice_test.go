@@ -1,6 +1,7 @@
-package util
+package dice
 
 import (
+	"tablib/validate"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ func TestValidateDiceExpr_shouldAcceptValidDice(t *testing.T) {
 		"1d6 + 2", "3d6 * 100", "1d4 * 2d6 + 3"}
 
 	for _, id := range ids {
-		vr := NewValidationResult()
+		vr := validate.NewValidationResult()
 		ValidateDiceExpr(id, "testval", vr)
 		if !vr.IsValid {
 			t.Errorf("This should be a valid die expression: %s", id)
@@ -24,7 +25,7 @@ func TestValidateDiceExpr_shouldRejectInvalidDice(t *testing.T) {
 		"3d6 2d6", "3d6 + 3 + 2d8", "2 + 1d6", "1d6+8", "3d0 + 3"}
 
 	for _, id := range ids {
-		vr := NewValidationResult()
+		vr := validate.NewValidationResult()
 		ValidateDiceExpr(id, "testval", vr)
 		if vr.IsValid {
 			t.Errorf("This should be an invalid die expression: %s", id)
@@ -33,7 +34,7 @@ func TestValidateDiceExpr_shouldRejectInvalidDice(t *testing.T) {
 }
 
 func TestValidateDiceExpr_shouldParseDiceExpr1(t *testing.T) {
-	vr := NewValidationResult()
+	vr := validate.NewValidationResult()
 	pde := ValidateDiceExpr("4d6", "testval", vr)
 
 	if len(pde) != 1 {
@@ -51,7 +52,7 @@ func TestValidateDiceExpr_shouldParseDiceExpr1(t *testing.T) {
 }
 
 func TestValidateDiceExpr_shouldParseDiceExpr2(t *testing.T) {
-	vr := NewValidationResult()
+	vr := validate.NewValidationResult()
 	pde := ValidateDiceExpr("4d6 + 3d7 - 1d3 * 21", "testval", vr)
 
 	if len(pde) != 4 {

@@ -2,7 +2,9 @@ package table
 
 import (
 	"fmt"
+	"tablib/dice"
 	"tablib/util"
+	"tablib/validate"
 )
 
 const (
@@ -16,10 +18,10 @@ type DefinitionPart struct {
 	TableType string `yaml:"type"`
 	Roll      string `yaml:"roll"`
 
-	DiceParsed []*util.DiceParseResult
+	DiceParsed []*dice.DiceParseResult
 }
 
-func (t *Table) validateDefinition(vr *util.ValidationResult) {
+func (t *Table) validateDefinition(vr *validate.ValidationResult) {
 	util.IsValidIdentifier(t.Definition.Name, "Name", definitionSection, vr)
 	util.IsNotEmpty(t.Definition.TableType, "TableType", definitionSection, vr)
 
@@ -40,7 +42,7 @@ func (t *Table) validateDefinition(vr *util.ValidationResult) {
 
 	//if a roll is provided, make sure it is valid
 	if t.Definition.Roll != "" {
-		parseResults := util.ValidateDiceExpr(t.Definition.Roll, definitionSection, vr)
+		parseResults := dice.ValidateDiceExpr(t.Definition.Roll, definitionSection, vr)
 		if parseResults != nil {
 			t.Definition.DiceParsed = parseResults
 		}

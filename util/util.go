@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"regexp"
+	"tablib/validate"
 )
 
 var (
@@ -18,14 +19,14 @@ func BuildFullName(name, idnum string) string {
 }
 
 //IsNotEmpty validates that the incoming string is not ""
-func IsNotEmpty(stringVal, yamlName, section string, vr *ValidationResult) {
+func IsNotEmpty(stringVal, yamlName, section string, vr *validate.ValidationResult) {
 	if stringVal == "" {
 		vr.Fail(section, fmt.Sprintf("Empty %s", yamlName))
 	}
 }
 
 //IsValidIdentifier validates the supplied string against the valid id regex
-func IsValidIdentifier(stringVal, yamlName, section string, vr *ValidationResult) {
+func IsValidIdentifier(stringVal, yamlName, section string, vr *validate.ValidationResult) {
 	if !validIdentifierPattern.MatchString(stringVal) {
 		vr.Fail(section, fmt.Sprintf("Invalid identifier for %s: %s", yamlName, stringVal))
 	}

@@ -4,7 +4,9 @@ import (
 	"strings"
 	"sync"
 	"tablib/table"
+	"tablib/tableresult"
 	"tablib/util"
+	"tablib/validate"
 
 	lua "github.com/yuin/gopher-lua"
 	"github.com/yuin/gopher-lua/parse"
@@ -28,7 +30,7 @@ type concreteTableRepo struct {
 	lock        *sync.RWMutex
 }
 
-func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*util.ValidationResult, error) {
+func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationResult, error) {
 	cr.lock.Lock()
 	defer cr.lock.Unlock()
 
@@ -102,12 +104,18 @@ func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*Sear
 	defer cr.lock.Unlock()
 	return make([]*SearchResult, 0)
 }
-func (cr *concreteTableRepo) Roll(tableName string, count int) *TableResult {
+func (cr *concreteTableRepo) Roll(tableName string, count int) *tableresult.TableResult {
 	cr.lock.RLock()
 	defer cr.lock.Unlock()
-	return nil
+
+	tr := tableresult.NewTableResult()
+	_, found := cr.tableStore[tableName]
+	if !found {
+
+	}
+	return tr
 }
-func (cr *concreteTableRepo) Pick(tableName string, count int) *TableResult {
+func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.TableResult {
 	cr.lock.RLock()
 	defer cr.lock.Unlock()
 	return nil

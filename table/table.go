@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"tablib/util"
+	"tablib/validate"
 )
 
 //Table is a table
@@ -25,8 +25,8 @@ var (
 
 //Validate ensures the table is valid and parses some aspects if it makes
 //sense to do so at validation
-func (t *Table) Validate() *util.ValidationResult {
-	vr := util.NewValidationResult()
+func (t *Table) Validate() *validate.ValidationResult {
+	vr := validate.NewValidationResult()
 
 	//validate and parse defintion
 	t.validateDefinition(vr)
@@ -53,7 +53,7 @@ func (t *Table) Validate() *util.ValidationResult {
 	return vr
 }
 
-func (t *Table) validateInternalInlineConsistency(vr *util.ValidationResult) {
+func (t *Table) validateInternalInlineConsistency(vr *validate.ValidationResult) {
 
 	idsUsed := make(map[string]struct{})
 	idsDefined := make([]string, 0, 1)

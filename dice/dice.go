@@ -1,10 +1,11 @@
-package util
+package dice
 
 import (
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"tablib/validate"
 )
 
 //DiceParseResult holds a result of parsing a Dice expression
@@ -20,7 +21,7 @@ var (
 )
 
 //ValidateDiceExpr validates and parses a dice expression
-func ValidateDiceExpr(diceExpr, section string, vr *ValidationResult) []*DiceParseResult {
+func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) []*DiceParseResult {
 
 	//safety - should have been checked before this was called
 	if diceExpr == "" {

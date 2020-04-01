@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"tablib/util"
+	"tablib/validate"
 )
 
 //InlinePart holds info about an inline table
@@ -18,7 +19,7 @@ const (
 	inlineSection = "Inline"
 )
 
-func (t *Table) validateInline(vr *util.ValidationResult) {
+func (t *Table) validateInline(vr *validate.ValidationResult) {
 
 	//ensure ID and content are both defined for each inline table
 	for _, il := range t.Inline {

@@ -2,7 +2,7 @@ package table
 
 import (
 	"fmt"
-	"tablib/util"
+	"tablib/validate"
 	"testing"
 
 	yaml "gopkg.in/yaml.v2"
@@ -671,7 +671,7 @@ func TestTable_shouldConvertInlineTableToInternalFormat(t *testing.T) {
 * Test Helpers
 * ***********************************************/
 
-func validateFromYaml(rawYaml string, t *testing.T) *util.ValidationResult {
+func validateFromYaml(rawYaml string, t *testing.T) *validate.ValidationResult {
 	table := tableFromYaml(rawYaml, t)
 	return table.Validate()
 }
@@ -687,13 +687,13 @@ func tableFromYaml(rawYaml string, t *testing.T) *Table {
 	return &table
 }
 
-func failOnErrors(vr *util.ValidationResult, t *testing.T) {
+func failOnErrors(vr *validate.ValidationResult, t *testing.T) {
 	if !vr.Valid() {
 		t.Error("Expected no validation errors")
 	}
 }
 
-func failOnNoErrors(vr *util.ValidationResult, t *testing.T) {
+func failOnNoErrors(vr *validate.ValidationResult, t *testing.T) {
 	if vr.Valid() {
 		t.Error("Expected validation errors")
 	}

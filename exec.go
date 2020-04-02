@@ -6,7 +6,6 @@ import (
 	"tablib/dice"
 	"tablib/table"
 	res "tablib/tableresult"
-	"tablib/tsm"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
@@ -29,14 +28,13 @@ type workPackage struct {
 type executionEngine struct {
 	callDepth int //number of table calls - prevent recursion with a hammer
 	rnd       *rand.Rand
-	tsm       tsm.TableStateMap
+	buf       string
 }
 
 func newExecutionEngine() *executionEngine {
 	return &executionEngine{
 		callDepth: 0,
 		rnd:       rand.New(rand.NewSource(time.Now().UnixNano())),
-		tsm:       tsm.NewTableStateMap(),
 	}
 }
 
@@ -82,12 +80,15 @@ func (ee *executionEngine) executeRoll(wp *workPackage, stateKey string, tr *res
 		dp[0] = dpr
 		rolledValue = ee.rollDice(dp)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
-		ee.tsm[stateKey] = wp.table.RawContent[rolledValue]
+		ee.buf = wp.table.RawContent[rolledValue]
 	case "range":
 		rolledValue = ee.rollDice(wp.table.Definition.DiceParsed)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
-		ee.tsm[stateKey] = ee.rangeResultFromRoll(wp, rolledValue)
+		ee.buf = ee.rangeResultFromRoll(wp, rolledValue)
 	}
+
+	//at this point, we have a random string stored in the buf string - but it may
+	//need expansion for each table it references
 
 }
 

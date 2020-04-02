@@ -40,7 +40,6 @@ func TestIsNotEmpty_shouldAcceptOnNonEmptyString(t *testing.T) {
 }
 
 func TestIsValidIdentifier_shouldAcceptValidIds(t *testing.T) {
-
 	var ids = []string{"Table_1_2020_kobe", "table_1_2020_kobe", "t1"}
 
 	for _, id := range ids {
@@ -53,7 +52,6 @@ func TestIsValidIdentifier_shouldAcceptValidIds(t *testing.T) {
 }
 
 func TestIsValidIdentifier_shouldRejectInvalidIds(t *testing.T) {
-
 	var ids = []string{"1Table", "", "_Table1", "a?Table", "A"}
 
 	for _, id := range ids {
@@ -62,5 +60,50 @@ func TestIsValidIdentifier_shouldRejectInvalidIds(t *testing.T) {
 		if vr.IsValid {
 			t.Errorf("This should be an invalid identifier: %s", id)
 		}
+	}
+}
+func TestFindNextTableRef_shouldWork(t *testing.T) {
+	ttrs := []*TestTableRef{
+		toTTR("hello world", false, "", "", ""),
+		toTTR("hello {@world}", true, "hello ", "@world", ""),
+		toTTR("{@hello} {@world}", true, "", "@hello", " {@world}"),
+		toTTR("{@hello}", true, "", "@hello", ""),
+		toTTR("Foo {@Arg} not {@Error} ", true, "Foo ", "@Arg", " not {@Error} "),
+	}
+
+	for _, ttr := range ttrs {
+		s, b := FindNextTableRef(ttr.tableString)
+		if b != ttr.b {
+			t.Errorf("Bool value mismatch wanted: %t got: %t", ttr.b, b)
+		}
+		if ttr.b {
+			if s[0] != ttr.s0 {
+				t.Errorf("Prefix mismatch wanted: %s got: %s", ttr.s0, s[0])
+			}
+			if s[1] != ttr.s1 {
+				t.Errorf("Reference mismatch wanted: %s got: %s", ttr.s1, s[1])
+			}
+			if s[2] != ttr.s2 {
+				t.Errorf("Suffix mismatch wanted: %s got: %s", ttr.s2, s[2])
+			}
+		}
+	}
+}
+
+type TestTableRef struct {
+	tableString string
+	b           bool
+	s0          string
+	s1          string
+	s2          string
+}
+
+func toTTR(tableString string, expectedBool bool, expected0, expected1, expected2 string) *TestTableRef {
+	return &TestTableRef{
+		tableString: tableString,
+		b:           expectedBool,
+		s0:          expected0,
+		s1:          expected1,
+		s2:          expected2,
 	}
 }

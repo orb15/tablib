@@ -64,11 +64,12 @@ func TestIsValidIdentifier_shouldRejectInvalidIds(t *testing.T) {
 }
 func TestFindNextTableRef_shouldWork(t *testing.T) {
 	ttrs := []*TestTableRef{
+		toTTR("", false, "", "", ""),
 		toTTR("hello world", false, "", "", ""),
-		toTTR("hello {@world}", true, "hello ", "@world", ""),
-		toTTR("{@hello} {@world}", true, "", "@hello", " {@world}"),
-		toTTR("{@hello}", true, "", "@hello", ""),
-		toTTR("Foo {@Arg} not {@Error} ", true, "Foo ", "@Arg", " not {@Error} "),
+		toTTR("hello {@world}", true, "hello ", "{@world}", ""),
+		toTTR("{@hello} {@world}", true, "", "{@hello}", " {@world}"),
+		toTTR("{@hello}", true, "", "{@hello}", ""),
+		toTTR("Foo {@Arg} not {@Error} ", true, "Foo ", "{@Arg}", " not {@Error} "),
 	}
 
 	for _, ttr := range ttrs {

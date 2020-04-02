@@ -3,9 +3,11 @@ package tablib
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"tablib/dice"
 	"tablib/table"
 	res "tablib/tableresult"
+	"tablib/util"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
@@ -28,7 +30,6 @@ type workPackage struct {
 type executionEngine struct {
 	callDepth int //number of table calls - prevent recursion with a hammer
 	rnd       *rand.Rand
-	buf       string
 }
 
 func newExecutionEngine() *executionEngine {
@@ -39,10 +40,10 @@ func newExecutionEngine() *executionEngine {
 }
 
 func (ee *executionEngine) execute(wp *workPackage, tr *res.TableResult) {
-	ee.executeInternal(wp, "0", tr)
+	ee.executeInternal(wp, tr)
 }
 
-func (ee *executionEngine) executeInternal(wp *workPackage, stateKey string, tr *res.TableResult) {
+func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult) {
 	//TODO: eventually may want to call a goroutine and use contexts for timeout
 	//but skip that for now and see how things perform. Might be important in public
 	//servers to timeout an ill-behaved lua script or recursive table issue
@@ -51,7 +52,7 @@ func (ee *executionEngine) executeInternal(wp *workPackage, stateKey string, tr 
 	case "roll":
 		tr.AddLog(fmt.Sprintf("Executing Roll on table: %s count: %d", wp.table.Definition.Name, wp.count))
 		for i := 1; i <= wp.count; i++ {
-			ee.executeRoll(wp, stateKey, tr)
+			ee.executeRoll(wp, tr)
 		}
 	case "pick":
 		tr.AddLog(fmt.Sprintf("Executing Pick on table: %s count: %d", wp.table.Definition.Name, wp.count))
@@ -60,7 +61,7 @@ func (ee *executionEngine) executeInternal(wp *workPackage, stateKey string, tr 
 	}
 }
 
-func (ee *executionEngine) executeRoll(wp *workPackage, stateKey string, tr *res.TableResult) {
+func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 
 	//check call depth - will rolling here push us over?
 	ee.callDepth++
@@ -70,6 +71,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, stateKey string, tr *res
 
 	//roll on the table
 	var rolledValue int
+	var buf string
 	switch wp.table.Definition.TableType {
 	case "flat": //flat tables need a dice parse result, range tables already have one
 		dpr := &dice.ParseResult{
@@ -80,15 +82,22 @@ func (ee *executionEngine) executeRoll(wp *workPackage, stateKey string, tr *res
 		dp[0] = dpr
 		rolledValue = ee.rollDice(dp)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
-		ee.buf = wp.table.RawContent[rolledValue]
+		buf = wp.table.RawContent[rolledValue]
 	case "range":
 		rolledValue = ee.rollDice(wp.table.Definition.DiceParsed)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
-		ee.buf = ee.rangeResultFromRoll(wp, rolledValue)
+		buf = ee.rangeResultFromRoll(wp, rolledValue)
 	}
 
 	//at this point, we have a random string stored in the buf string - but it may
 	//need expansion for each table it references
+	bufParts, exists := util.FindNextTableRef(buf)
+	if exists { //there is at least one table ref remaining
+		var sb strings.Builder
+		sb.WriteString(bufParts[0]) //everything up to the first reference
+
+		sb.WriteString(bufParts[2]) //everything after the first reference
+	}
 
 }
 

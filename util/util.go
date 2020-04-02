@@ -51,7 +51,7 @@ func FindNextTableRef(tableEntry string) ([]string, bool) {
 	} else {
 		retval[0] = string(asByteSlice[:startIdx])
 	}
-	retval[1] = string(asByteSlice[startIdx+1 : stopIdx])
+	retval[1] = string(asByteSlice[startIdx : stopIdx+1])
 	retval[2] = string(asByteSlice[stopIdx+1:])
 	return retval, true
 }

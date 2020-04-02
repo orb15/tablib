@@ -20,7 +20,12 @@ type Table struct {
 }
 
 var (
-	inlineCalledPattern = regexp.MustCompile("(\\{@[0-9]+\\})")
+	//InlineCalledPattern represents syntax for an inline table call
+	InlineCalledPattern = regexp.MustCompile("(\\{#[0-9]+\\})")
+	//ExternalCalledPattern represents syntax for an external table call
+	ExternalCalledPattern = regexp.MustCompile("\\{@(.*)\\}")
+	//PickCalledPattern represents syntax for a pick table call
+	PickCalledPattern = regexp.MustCompile("\\{[0-9]+!(.*)\\}")
 )
 
 //Validate ensures the table is valid and parses some aspects if it makes
@@ -39,6 +44,7 @@ func (t *Table) Validate() *validate.ValidationResult {
 	case "range":
 		t.validateRangeContent(vr)
 	}
+	//t.validateContentTableRefs(vr)
 
 	//validate and parse Inline table(s) if needed
 	if len(t.Inline) > 0 {
@@ -62,13 +68,13 @@ func (t *Table) validateInternalInlineConsistency(vr *validate.ValidationResult)
 	idsDefined := make([]string, 0, 1)
 	for _, rc := range t.RawContent {
 
-		if inlineCalledPattern.MatchString(rc) {
-			allMatches := inlineCalledPattern.FindAllStringSubmatch(rc, -1)
+		if InlineCalledPattern.MatchString(rc) {
+			allMatches := InlineCalledPattern.FindAllStringSubmatch(rc, -1)
 
 			//for each inline table reference, add it to a set of Ids for later comparison
 			for i := 0; i < len(allMatches); i++ {
 				aMatch := allMatches[i][1]
-				left := strings.TrimPrefix(aMatch, "{@")
+				left := strings.TrimPrefix(aMatch, "{#")
 				idAsString := strings.TrimSuffix(left, "}")
 				idsUsed[idAsString] = struct{}{}
 			}

@@ -458,7 +458,7 @@ func TestTable_shouldAcceptWellformedInlineTable(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@1}
+    - item 1 - {#1}
     - item 2
     - item 3
   inline:
@@ -477,7 +477,7 @@ func TestTable_shouldRejectMissinglineID(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@1}
+    - item 1 - {#1}
     - item 2
     - item 3
   inline:
@@ -497,7 +497,7 @@ func TestTable_shouldRejectNonnumericlineID(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@foo}
+    - item 1 - {#foo}
     - item 2
     - item 3
   inline:
@@ -517,7 +517,7 @@ func TestTable_shouldRejectBadReflineID1(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@1}
+    - item 1 - {#1}
     - item 2
     - item 3
   inline:
@@ -538,7 +538,7 @@ func TestTable_shouldRejectBadReflineID2(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@2}
+    - item 1 - {#2}
     - item 2
     - item 3
   inline:
@@ -559,7 +559,7 @@ func TestTable_shouldRejectBadInlineID1(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@0}
+    - item 1 - {#0}
     - item 2
     - item 3
   inline:
@@ -579,7 +579,7 @@ func TestTable_shouldRejectBadInlineID2(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@-1}
+    - item 1 - {#-1}
     - item 2
     - item 3
   inline:
@@ -599,8 +599,8 @@ func TestTable_shouldRejectDuplicateInlineIDs(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@1}
-    - item 2 - {@1}
+    - item 1 - {#1}
+    - item 2 - {#1}
     - item 3
   inline:
     - id: 1
@@ -623,7 +623,7 @@ func TestTable_shouldRejectMissingInlineContent(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@2}
+    - item 1 - {#2}
     - item 2
     - item 3
   inline:
@@ -666,8 +666,8 @@ func TestTable_shouldConvertInlineTableToInternalFormat(t *testing.T) {
     name: TestTable_Flat
     type: flat
   content:
-    - item 1 - {@1}
-    - item 2 - {@2}
+    - item 1 - {#1}
+    - item 2 - {#2}
     - item 3
   inline:
     - id: 1

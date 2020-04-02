@@ -2,8 +2,6 @@ package table
 
 import (
 	"fmt"
-	"regexp"
-	"sort"
 	"strings"
 	"tablib/validate"
 )
@@ -19,15 +17,6 @@ type Table struct {
 	RangeContent  []*rangedContent
 }
 
-var (
-	//InlineCalledPattern represents syntax for an inline table call
-	InlineCalledPattern = regexp.MustCompile("(\\{#[0-9]+\\})")
-	//ExternalCalledPattern represents syntax for an external table call
-	ExternalCalledPattern = regexp.MustCompile("\\{@(.*)\\}")
-	//PickCalledPattern represents syntax for a pick table call
-	PickCalledPattern = regexp.MustCompile("\\{[0-9]+!(.*)\\}")
-)
-
 //Validate ensures the table is valid and parses some aspects if it makes
 //sense to do so at validation
 func (t *Table) Validate() *validate.ValidationResult {
@@ -36,16 +25,6 @@ func (t *Table) Validate() *validate.ValidationResult {
 	//validate and parse defintion
 	t.validateDefinition(vr)
 
-	//validate and parse content section
-	if len(t.RawContent) == 0 {
-		vr.Fail(contentSection, "A table must have content")
-	}
-	switch t.Definition.TableType {
-	case "range":
-		t.validateRangeContent(vr)
-	}
-	//t.validateContentTableRefs(vr)
-
 	//validate and parse Inline table(s) if needed
 	if len(t.Inline) > 0 {
 		t.validateInline(vr)
@@ -53,6 +32,18 @@ func (t *Table) Validate() *validate.ValidationResult {
 
 	//check table internal consistency for inlineSection
 	t.validateInternalInlineConsistency(vr)
+
+	//don't look into the content if the table has structural issues
+	if vr.Valid() {
+		//the table is reasonably valid at this point.
+		if len(t.RawContent) == 0 {
+			vr.Fail(contentSection, "A table must have content")
+		}
+		switch t.Definition.TableType {
+		case "range":
+			t.validateRanges(vr)
+		}
+	}
 
 	//have there been any actual validation errors? If so, mark table as Invalid
 	t.IsValid = true
@@ -111,14 +102,6 @@ func (t *Table) validateInternalInlineConsistency(vr *validate.ValidationResult)
 		}
 		if !found {
 			vr.Warn(inlineSection, fmt.Sprintf("Inline table ID: %s is defined but not referenced", did))
-		}
-	}
-
-	//ensure uniqueness of inline ids
-	sort.Strings(idsDefined)
-	for i := 0; i < len(idsDefined)-1; i++ {
-		if idsDefined[i] == idsDefined[i+1] {
-			vr.Fail(inlineSection, fmt.Sprintf("Inline table ID: %s defined twice", idsDefined[i]))
 		}
 	}
 }

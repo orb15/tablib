@@ -23,7 +23,7 @@ var (
 	fixedContentPattern  = regexp.MustCompile("^\\{([0-9]+)\\}.*$")
 )
 
-func (t *Table) validateRangeContent(vr *validate.ValidationResult) {
+func (t *Table) validateRanges(vr *validate.ValidationResult) {
 
 	//set up to store parsed ranged content
 	allContent := make([]*rangedContent, 0, 1)

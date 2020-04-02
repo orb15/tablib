@@ -8,7 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func TestTable_shouldAcceptWellformedFlatTable(t *testing.T) {
+func TestTableValidation_shouldAcceptWellformedFlatTable(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -23,7 +23,7 @@ func TestTable_shouldAcceptWellformedFlatTable(t *testing.T) {
 	failOnErrors(vr, t)
 }
 
-func TestTable_shouldAcceptWellformedInlineTable(t *testing.T) {
+func TestTableValidation_shouldAcceptWellformedInlineTable(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -43,7 +43,7 @@ func TestTable_shouldAcceptWellformedInlineTable(t *testing.T) {
 	failOnErrors(vr, t)
 }
 
-func TestTable_shouldAcceptWellformedRangeTable(t *testing.T) {
+func TestTableValidation_shouldAcceptWellformedRangeTable(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -59,30 +59,7 @@ func TestTable_shouldAcceptWellformedRangeTable(t *testing.T) {
 	failOnErrors(vr, t)
 }
 
-func TestTable_shouldRejectEmptyContent1(t *testing.T) {
-	yml := `
-  definition:
-    name: TestTable_Flat
-    type: flat
-    note: this is an optional note
-  content:`
-
-	vr := validateFromYaml(yml, t)
-	failOnNoErrors(vr, t)
-}
-
-func TestTable_shouldRejectEmptyContent2(t *testing.T) {
-	yml := `
-  definition:
-    name: TestTable_Flat
-    type: flat
-    note: this is an optional note`
-
-	vr := validateFromYaml(yml, t)
-	failOnNoErrors(vr, t)
-}
-
-func TestTable_shouldRejectBadReflineID1(t *testing.T) {
+func TestTableValidation_shouldRejectInlineMismatch1(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -103,7 +80,7 @@ func TestTable_shouldRejectBadReflineID1(t *testing.T) {
 	equals(vr.WarnCount(), 1, t)
 }
 
-func TestTable_shouldRejectBadReflineID2(t *testing.T) {
+func TestTableValidation_shouldRejectInlineMismatch2(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat

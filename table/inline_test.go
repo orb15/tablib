@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestTable_shouldRejectMissingInlineID(t *testing.T) {
+func TestInlineValidation_shouldRejectMissingInlineID(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -27,7 +27,7 @@ func TestTable_shouldRejectMissingInlineID(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectNonnumericInlineID(t *testing.T) {
+func TestInlineValidation_shouldRejectNonnumericInlineID(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -49,7 +49,7 @@ func TestTable_shouldRejectNonnumericInlineID(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectBadInlineID1(t *testing.T) {
+func TestTestInlineValidation_shouldRejectBadInlineID1(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -71,7 +71,7 @@ func TestTable_shouldRejectBadInlineID1(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectBadInlineID2(t *testing.T) {
+func TestTestInlineValidation_shouldRejectBadInlineID2(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -93,7 +93,7 @@ func TestTable_shouldRejectBadInlineID2(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectDuplicateInlineIDs(t *testing.T) {
+func TestTestInlineValidation_shouldRejectDuplicateInlineIDs(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -119,7 +119,7 @@ func TestTable_shouldRejectDuplicateInlineIDs(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectMissingInlineContent(t *testing.T) {
+func TestTestInlineValidation_shouldRejectMissingInlineContent(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -137,7 +137,7 @@ func TestTable_shouldRejectMissingInlineContent(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldConvertInlineTableToInternalFormat(t *testing.T) {
+func TestTestInlineValidation_shouldConvertInlineTableToInternalFormat(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat

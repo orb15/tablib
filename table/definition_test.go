@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestTable_shouldRejectTableType1(t *testing.T) {
+func TestDefinitionValidation_shouldRejectTableType1(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -22,7 +22,7 @@ func TestTable_shouldRejectTableType1(t *testing.T) {
 	equals(vr.ErrorCount(), 2, t)
 }
 
-func TestTable_shouldRejectTableType2(t *testing.T) {
+func TestDefinitionValidation_shouldRejectTableType2(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -39,7 +39,7 @@ func TestTable_shouldRejectTableType2(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectTableType3(t *testing.T) {
+func TestDefinitionValidation_shouldRejectTableType3(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -56,7 +56,7 @@ func TestTable_shouldRejectTableType3(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldWarnOnRollFlatTable(t *testing.T) {
+func TestDefinitionValidation_shouldWarnOnRollFlatTable(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -75,7 +75,7 @@ func TestTable_shouldWarnOnRollFlatTable(t *testing.T) {
 	equals(vr.WarnCount(), 1, t)
 }
 
-func TestTable_shouldAcceptValidDefinitionName(t *testing.T) {
+func TestDefinitionValidation_shouldAcceptValidDefinitionName(t *testing.T) {
 	yml := `
   definition:
     name: Table_1_2020_kobe
@@ -91,7 +91,7 @@ func TestTable_shouldAcceptValidDefinitionName(t *testing.T) {
 	failOnErrors(vr, t)
 }
 
-func TestTable_shouldRejectInvalidDefinitionName(t *testing.T) {
+func TestDefinitionValidation_shouldRejectInvalidDefinitionName(t *testing.T) {
 	yml := `
   definition:
     name:
@@ -108,7 +108,7 @@ func TestTable_shouldRejectInvalidDefinitionName(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldAcceptValidDice(t *testing.T) {
+func TestDefinitionValidation_shouldAcceptValidDice(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -123,7 +123,7 @@ func TestTable_shouldAcceptValidDice(t *testing.T) {
 	failOnErrors(vr, t)
 }
 
-func TestTable_shouldRejectMissingDice(t *testing.T) {
+func TestDefinitionValidation_shouldRejectMissingDice(t *testing.T) {
 	yml := `
   definition:
     name: TestTable

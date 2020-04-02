@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestTable_shouldRejectInvertedRange(t *testing.T) {
+func TestRangeValidation_shouldRejectInvertedRange(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -23,7 +23,7 @@ func TestTable_shouldRejectInvertedRange(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectOverlappingRange(t *testing.T) {
+func TestRangeValidation_shouldRejectOverlappingRange(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -41,7 +41,7 @@ func TestTable_shouldRejectOverlappingRange(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectStrangeRange1(t *testing.T) {
+func TestRangeValidation_shouldRejectStrangeRange1(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -59,7 +59,7 @@ func TestTable_shouldRejectStrangeRange1(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectStrangeRange2(t *testing.T) {
+func TestRangeValidation_shouldRejectStrangeRange2(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -77,7 +77,7 @@ func TestTable_shouldRejectStrangeRange2(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectStrangeRange3(t *testing.T) {
+func TestRangeValidation_shouldRejectStrangeRange3(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -95,7 +95,7 @@ func TestTable_shouldRejectStrangeRange3(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectStrangeRange4(t *testing.T) {
+func TestRangeValidation_shouldRejectStrangeRange4(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -113,7 +113,7 @@ func TestTable_shouldRejectStrangeRange4(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldRejectStrangeRange5(t *testing.T) {
+func TestRangeValidation_shouldRejectStrangeRange5(t *testing.T) {
 	yml := `
   definition:
     name: TestTable
@@ -131,7 +131,7 @@ func TestTable_shouldRejectStrangeRange5(t *testing.T) {
 	equals(vr.ErrorCount(), 1, t)
 }
 
-func TestTable_shouldConvertRangedTableToInternalFormat(t *testing.T) {
+func TestRangeValidation_shouldConvertRangedTableToInternalFormat(t *testing.T) {
 	yml := `
   definition:
     name: TestTable

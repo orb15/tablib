@@ -28,7 +28,7 @@ func TestContent_shouldRejectEmptyContent2(t *testing.T) {
 	failOnNoErrors(vr, t)
 }
 
-func TestContent_shouldRejectMalformedTableRefs(t *testing.T) {
+func TestContent_shouldRejectMalformedTablePairs(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -46,6 +46,51 @@ func TestContent_shouldRejectMalformedTableRefs(t *testing.T) {
 	for _, tc := range testContent {
 		vr := validate.NewValidationResult()
 		tb.validateContentTableRefPairs(tc, vr)
+		failOnNoErrors(vr, t)
+		equals(vr.ErrorCount(), 1, t)
+	}
+}
+
+func TestContent_shouldAcceptWellformedTablePairs(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+  content:
+    - item 1
+    - item 2
+    - item 3`
+
+	testContent := []string{"{}", "hello{world}", "{}{}{}", "{@Goo}",
+		"{3!Foo}", "{#667}"}
+
+	tb := tableFromYaml(yml, t)
+
+	for _, tc := range testContent {
+		vr := validate.NewValidationResult()
+		tb.validateContentTableRefPairs(tc, vr)
+		failOnErrors(vr, t)
+	}
+}
+
+func TestContent_shouldRejectMalformedTableRefs(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+  content:
+    - item 1
+    - item 2
+    - item 3`
+
+	testContent := []string{"{}", "{!2}", "{W@rld}", "good{@Ref} then {!Bad}",
+		"Content was {$bad} but then good {#3}", "{3#}"}
+
+	tb := tableFromYaml(yml, t)
+
+	for _, tc := range testContent {
+		vr := validate.NewValidationResult()
+		tb.validateContentTableRefs(tc, vr)
 		failOnNoErrors(vr, t)
 		equals(vr.ErrorCount(), 1, t)
 	}

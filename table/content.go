@@ -1,8 +1,10 @@
 package table
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+	"tablib/util"
 	"tablib/validate"
 )
 
@@ -43,7 +45,34 @@ func (t *Table) validateContent(vr *validate.ValidationResult) {
 	//allContent contains the actual content of the table. Ensure all tablerefs
 	//are valid
 	for _, c := range allContent {
-		t.validateContentTableRefPairs(c, vr)
+		t.validateContentTableRefPairs(c, vr) //do we have close {}?
+	}
+
+	//at this point we can check for valid table refs - if no failures so far
+	if vr.Valid() {
+		for _, c := range allContent {
+			t.validateContentTableRefs(c, vr) //do we have close {}?
+		}
+	}
+}
+
+func (t *Table) validateContentTableRefs(entry string, vr *validate.ValidationResult) {
+	parts, found := util.FindNextTableRef(entry)
+	for found {
+		if ExternalCalledPattern.MatchString(parts[1]) {
+			parts, found = util.FindNextTableRef(parts[2])
+			continue
+		}
+		if InlineCalledPattern.MatchString(parts[1]) {
+			parts, found = util.FindNextTableRef(parts[2])
+			continue
+		}
+		if PickCalledPattern.MatchString(parts[1]) {
+			parts, found = util.FindNextTableRef(parts[2])
+			continue
+		}
+		vr.Fail(contentSection, fmt.Sprintf("Invalid table ref: %s", parts[1]))
+		parts, found = util.FindNextTableRef(parts[2])
 	}
 }
 

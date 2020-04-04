@@ -95,3 +95,25 @@ func TestContent_shouldRejectMalformedTableRefs(t *testing.T) {
 		equals(vr.ErrorCount(), 1, t)
 	}
 }
+
+func TestContent_shouldAcceptWellformedTableRefs(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+  content:
+    - item 1
+    - item 2
+    - item 3`
+
+	testContent := []string{"{@Sloopy}", "{2!Goober}", "good{#3} then {3!Better}",
+		"Content was {#2} but then got {@Better} and {@Better_yet}", "perfectly ok"}
+
+	tb := tableFromYaml(yml, t)
+
+	for _, tc := range testContent {
+		vr := validate.NewValidationResult()
+		tb.validateContentTableRefs(tc, vr)
+		failOnErrors(vr, t)
+	}
+}

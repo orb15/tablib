@@ -60,14 +60,19 @@ func (t *Table) validateContentTableRefs(entry string, vr *validate.ValidationRe
 	parts, found := util.FindNextTableRef(entry)
 	for found {
 		if ExternalCalledPattern.MatchString(parts[1]) {
+			matches := ExternalCalledPattern.FindStringSubmatch(parts[1])
+			util.IsValidIdentifier(matches[1], parts[1], contentSection, vr)
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
 		}
 		if InlineCalledPattern.MatchString(parts[1]) {
+			//inline eferences are validated elsewhere
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
 		}
 		if PickCalledPattern.MatchString(parts[1]) {
+			matches := PickCalledPattern.FindStringSubmatch(parts[1])
+			util.IsValidIdentifier(matches[1], parts[1], contentSection, vr)
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
 		}

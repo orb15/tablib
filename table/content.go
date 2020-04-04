@@ -2,6 +2,8 @@ package table
 
 import (
 	"regexp"
+	"strings"
+	"tablib/validate"
 )
 
 var (
@@ -12,3 +14,65 @@ var (
 	//PickCalledPattern represents syntax for a pick table call
 	PickCalledPattern = regexp.MustCompile("\\{[0-9]+!(.*)\\}")
 )
+
+func (t *Table) validateContent(vr *validate.ValidationResult) {
+
+	//content section must exist
+	if len(t.RawContent) == 0 {
+		vr.Fail(contentSection, "A table must have content")
+	}
+
+	var allContent []string
+	switch t.Definition.TableType {
+	case "range":
+		//validate the ranges expressed in a ranged table and parse those valid ranges
+		//this must be done before the content section of a table can be examined for
+		//proper references since the range expressions (eg {2-3}) appear to be
+		//invalid table references
+		t.validateRanges(vr)
+		//now that ranges are validated and parsed, store the actual ranged
+		//content for firther Validation
+		allContent = make([]string, 0, len(t.RangeContent))
+		for _, rc := range t.RangeContent {
+			allContent = append(allContent, rc.Content)
+		}
+	case "flat":
+		allContent = t.RawContent
+	}
+
+	//allContent contains the actual content of the table. Ensure all tablerefs
+	//are valid
+	for _, c := range allContent {
+		t.validateContentTableRefPairs(c, vr)
+	}
+}
+
+func (t *Table) validateContentTableRefPairs(entry string, vr *validate.ValidationResult) {
+
+	//loop over string, ensuring {} occur in closed pairs
+	reader := strings.NewReader(entry)
+	state := 0 //a state = 0 means no { or } encountered
+	for reader.Len() > 0 {
+		c, _ := reader.ReadByte()
+		if c == '{' {
+			if state == 0 {
+				state = 1 //we have an open
+			} else {
+				vr.Fail(contentSection, "Unexpected open brace {")
+				return //this contnt line is likely to be a mess, stop checking
+			}
+		}
+		if c == '}' {
+			if state == 1 {
+				state = 0
+			} else {
+				vr.Fail(contentSection, "Unexpected close brace }")
+				return //this contnt line is likely to be a mess, stop checking
+			}
+		}
+	}
+	//if we reach the end of the string, state should be 0
+	if state != 0 {
+		vr.Fail(contentSection, "Unclosed open brace {")
+	}
+}

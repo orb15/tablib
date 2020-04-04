@@ -16,10 +16,6 @@ type InlinePart struct {
 	FullyQualifiedName string
 }
 
-const (
-	inlineSection = "Inline"
-)
-
 func (t *Table) validateInline(vr *validate.ValidationResult) {
 
 	idsDefined := make([]string, 0, len(t.Inline))

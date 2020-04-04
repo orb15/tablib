@@ -14,10 +14,6 @@ type rangedContent struct {
 	Content string
 }
 
-const (
-	contentSection = "Content"
-)
-
 var (
 	rangedContentPattern = regexp.MustCompile("^\\{([0-9]+)-([0-9]+)\\}.*$")
 	fixedContentPattern  = regexp.MustCompile("^\\{([0-9]+)\\}.*$")

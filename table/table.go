@@ -17,6 +17,12 @@ type Table struct {
 	RangeContent  []*rangedContent
 }
 
+const (
+	definitionSection = "Definition"
+	inlineSection     = "Inline"
+	contentSection    = "Content"
+)
+
 //Validate ensures the table is valid and parses some aspects if it makes
 //sense to do so at validation
 func (t *Table) Validate() *validate.ValidationResult {
@@ -33,16 +39,9 @@ func (t *Table) Validate() *validate.ValidationResult {
 	//check table internal consistency for inlineSection
 	t.validateInternalInlineConsistency(vr)
 
-	//don't look into the content if the table has structural issues
+	//the table is reasonably valid at this point, check content
 	if vr.Valid() {
-		//the table is reasonably valid at this point.
-		if len(t.RawContent) == 0 {
-			vr.Fail(contentSection, "A table must have content")
-		}
-		switch t.Definition.TableType {
-		case "range":
-			t.validateRanges(vr)
-		}
+		t.validateContent(vr)
 	}
 
 	//have there been any actual validation errors? If so, mark table as Invalid

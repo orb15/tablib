@@ -7,10 +7,6 @@ import (
 	"tablib/validate"
 )
 
-const (
-	definitionSection = "Definition"
-)
-
 //DefinitionPart holds the table definition or header
 type DefinitionPart struct {
 	Name      string `yaml:"name"`

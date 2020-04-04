@@ -144,7 +144,8 @@ func TestRangeValidation_shouldConvertRangedTableToInternalFormat(t *testing.T) 
     - '{6}item 4'`
 
 	tb := tableFromYaml(yml, t)
-	vr := tb.Validate()
+	vr := validate.NewValidationResult()
+	tb.validateRanges(vr)
 	failOnErrors(vr, t)
 
 	equals(len(tb.RangeContent), 4, t)

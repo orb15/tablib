@@ -3,6 +3,7 @@ package tablib
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"tablib/dice"
 	"tablib/table"
@@ -55,9 +56,9 @@ func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult)
 			ee.executeRoll(wp, tr)
 		}
 	case "pick":
-		tr.AddLog(fmt.Sprintf("Executing Pick on table: %s count: %d", wp.table.Definition.Name, wp.count))
+		tr.AddLog(fmt.Sprintf("NOOP: Executing Pick on table: %s count: %d", wp.table.Definition.Name, wp.count))
 	case "script":
-		tr.AddLog(fmt.Sprintf("Executing Script: FIXMYNAME count: %d", wp.count))
+		tr.AddLog(fmt.Sprintf("NOOP: Executing Script: FIXMYNAME count: %d", wp.count))
 	}
 }
 
@@ -92,13 +93,77 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 	//at this point, we have a random string stored in the buf string - but it may
 	//need expansion for each table it references
 	bufParts, exists := util.FindNextTableRef(buf)
-	if exists { //there is at least one table ref remaining
+	for exists { //there is at least one table ref remaining
 		var sb strings.Builder
 		sb.WriteString(bufParts[0]) //everything up to the first reference
 
-		sb.WriteString(bufParts[2]) //everything after the first reference
-	}
+		//need to recurse here - build new work pkg & create new TableResult
+		//On return, need to add the string from TableResult to the String Builder
+		//need to add the Log entries from the TabbleResult to this TableResult
 
+		nextWp := &workPackage{
+			repo:   wp.repo,
+			script: nil,
+		}
+		safeAndSane := false
+
+		//what type of table ref do we have - build rest of workPkg...
+		if table.ExternalCalledPattern.MatchString(bufParts[1]) {
+			extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1])
+			nextWp.count = 1 //always roll once per external tables
+			nextWp.operation = "roll"
+			tableRef, err := wp.repo.TableForName(extMatches[1])
+			if err != nil {
+				tr.AddLog(fmt.Sprintf("%v", err))
+				return
+			}
+			nextWp.table = tableRef
+			safeAndSane = true
+		}
+		if table.InlineCalledPattern.MatchString(bufParts[1]) {
+			extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1])
+			nextWp.count = 1 //always roll once per internal tables
+			nextWp.operation = "roll"
+			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
+			tableRef, err := wp.repo.TableForName(tablename)
+			if err != nil {
+				tr.AddLog(fmt.Sprintf("%v", err))
+				return
+			}
+			nextWp.table = tableRef
+			safeAndSane = true
+		}
+		if table.PickCalledPattern.MatchString(bufParts[1]) {
+			extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1])
+			nextWp.count, _ = strconv.Atoi(extMatches[1]) //no err per regex
+			nextWp.operation = "pick"
+			tableRef, err := wp.repo.TableForName(extMatches[2])
+			if err != nil {
+				tr.AddLog(fmt.Sprintf("%v", err))
+				return
+			}
+			nextWp.table = tableRef
+			safeAndSane = true
+		}
+
+		//should never happen but check anyway - if we fail here, tests and
+		//table parsing logic has gone wrong
+		if !safeAndSane {
+			tr.AddLog(fmt.Sprintf("Unexpected table ref. This should NEVER happen: %s", bufParts[1]))
+			return
+		}
+
+		//recurse to expand the first ref found in bufParts
+		nextTr := res.NewTableResult()
+		ee.executeInternal(nextWp, nextTr)
+
+		//capture the results of the recursion - add expanded string and log(s)
+		sb.WriteString(nextTr.Result)
+		tr.Log = append(tr.Log, nextTr.Log...)
+
+		sb.WriteString(bufParts[2])                           //everything after the first reference
+		bufParts, exists = util.FindNextTableRef(sb.String()) //keep expanding
+	}
 }
 
 func (ee *executionEngine) rangeResultFromRoll(wp *workPackage, roll int) string {

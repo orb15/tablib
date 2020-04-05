@@ -146,6 +146,14 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 	return make(map[string]string), nil
 }
 
+func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
+	tbl, found := cr.tableStore[name]
+	if !found {
+		return nil, fmt.Errorf("Table does not exist: %s", name)
+	}
+	return tbl.parsedTable, nil
+}
+
 //for each inline table in a table, create a full-featured table
 func extractInlineTables(mainTable *table.Table) []*table.Table {
 	inlinesAsTables := make([]*table.Table, len(mainTable.Inline))

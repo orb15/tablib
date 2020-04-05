@@ -10,11 +10,11 @@ import (
 
 var (
 	//InlineCalledPattern represents syntax for an inline table call
-	InlineCalledPattern = regexp.MustCompile("(\\{#[0-9]+\\})")
+	InlineCalledPattern = regexp.MustCompile("\\{#([0-9]+)\\}")
 	//ExternalCalledPattern represents syntax for an external table call
 	ExternalCalledPattern = regexp.MustCompile("\\{@(.*)\\}")
 	//PickCalledPattern represents syntax for a pick table call
-	PickCalledPattern = regexp.MustCompile("\\{[0-9]+!(.*)\\}")
+	PickCalledPattern = regexp.MustCompile("\\{([0-9]+)!(.*)\\}")
 )
 
 func (t *Table) validateContent(vr *validate.ValidationResult) {
@@ -72,7 +72,7 @@ func (t *Table) validateContentTableRefs(entry string, vr *validate.ValidationRe
 		}
 		if PickCalledPattern.MatchString(parts[1]) {
 			matches := PickCalledPattern.FindStringSubmatch(parts[1])
-			util.IsValidIdentifier(matches[1], parts[1], contentSection, vr)
+			util.IsValidIdentifier(matches[2], parts[1], contentSection, vr)
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
 		}

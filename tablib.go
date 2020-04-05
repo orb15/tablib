@@ -2,6 +2,7 @@ package tablib
 
 import (
 	"sync"
+	"tablib/table"
 	"tablib/tableresult"
 	"tablib/validate"
 )
@@ -15,6 +16,7 @@ type TableRepository interface {
 	Pick(tableName string, count int) *tableresult.TableResult
 	Roll(tableName string, count int) *tableresult.TableResult
 	Search(namePredicate string, tags []string) []*SearchResult
+	TableForName(name string) (*table.Table, error)
 }
 
 //SearchResult holds information about each object discovered during a search

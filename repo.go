@@ -115,7 +115,7 @@ func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*Sear
 }
 func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresult.TableResult {
 	cr.lock.RLock()
-	defer cr.lock.Unlock()
+	defer cr.lock.RUnlock()
 
 	tr := tableresult.NewTableResult()
 	tbl, found := cr.tableStore[tableName]
@@ -135,11 +135,13 @@ func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresu
 	exeng.execute(wp, tr)
 	return tr
 }
+
 func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.TableResult {
 	cr.lock.RLock()
 	defer cr.lock.Unlock()
 	return nil
 }
+
 func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, error) {
 	cr.lock.RLock()
 	defer cr.lock.Unlock()
@@ -156,7 +158,7 @@ func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
 
 //for each inline table in a table, create a full-featured table
 func extractInlineTables(mainTable *table.Table) []*table.Table {
-	inlinesAsTables := make([]*table.Table, len(mainTable.Inline))
+	inlinesAsTables := make([]*table.Table, 0, len(mainTable.Inline))
 	for _, ilt := range mainTable.Inline {
 
 		def := &table.DefinitionPart{

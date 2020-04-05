@@ -83,7 +83,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 		dp[0] = dpr
 		rolledValue = ee.rollDice(dp)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
-		buf = wp.table.RawContent[rolledValue]
+		buf = wp.table.RawContent[rolledValue-1]
 	case "range":
 		rolledValue = ee.rollDice(wp.table.Definition.DiceParsed)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
@@ -93,8 +93,14 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 	//at this point, we have a random string stored in the buf string - but it may
 	//need expansion for each table it references
 	bufParts, exists := util.FindNextTableRef(buf)
+	if !exists { //expansion not needed
+		tr.AddResult(buf)
+		return
+	}
+
+	//here if need to expand at least one tableref
+	var sb strings.Builder
 	for exists { //there is at least one table ref remaining
-		var sb strings.Builder
 		sb.WriteString(bufParts[0]) //everything up to the first reference
 
 		//need to recurse here - build new work pkg & create new TableResult
@@ -158,12 +164,17 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 		ee.executeInternal(nextWp, nextTr)
 
 		//capture the results of the recursion - add expanded string and log(s)
-		sb.WriteString(nextTr.Result)
+		//only one result is expected unless there was a multi-pick call so
+		//handle all cases via append. We expect many logs to be present in nextTr tho
+		tr.Result = append(tr.Result, nextTr.Result...)
 		tr.Log = append(tr.Log, nextTr.Log...)
 
-		sb.WriteString(bufParts[2])                           //everything after the first reference
+		//tack on that part of the buffer that hasnt been checked for references
+		sb.WriteString(bufParts[2])
+
 		bufParts, exists = util.FindNextTableRef(sb.String()) //keep expanding
 	}
+	tr.AddResult(sb.String())
 }
 
 func (ee *executionEngine) rangeResultFromRoll(wp *workPackage, roll int) string {

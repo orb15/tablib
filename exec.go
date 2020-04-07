@@ -41,28 +41,32 @@ func newExecutionEngine() *executionEngine {
 }
 
 func (ee *executionEngine) execute(wp *workPackage, tr *res.TableResult) {
-	ee.executeInternal(wp, tr)
+	for i := 1; i <= wp.count; i++ {
+		generated := ee.executeInternal(wp, tr)
+		tr.AddResult(generated)
+	}
 }
 
-func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult) {
+func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult) string {
 	//TODO: eventually may want to call a goroutine and use contexts for timeout
 	//but skip that for now and see how things perform. Might be important in public
 	//servers to timeout an ill-behaved lua script or recursive table issue
 
+	var generated string
 	switch wp.operation {
-	case "roll":
-		tr.AddLog(fmt.Sprintf("Executing Roll on table: %s count: %d", wp.table.Definition.Name, wp.count))
-		for i := 1; i <= wp.count; i++ {
-			ee.executeRoll(wp, tr)
-		}
-	case "pick":
-		tr.AddLog(fmt.Sprintf("NOOP: Executing Pick on table: %s count: %d", wp.table.Definition.Name, wp.count))
+	case table.TableOpRoll:
+		tr.AddLog(fmt.Sprintf("Executing Roll on table: %s", wp.table.Definition.Name))
+		generated = ee.executeRoll(wp, tr)
+	case table.TableOpPick:
+		tr.AddLog(fmt.Sprintf("NOOP: Executing Pick on table: %s ", wp.table.Definition.Name))
 	case "script":
-		tr.AddLog(fmt.Sprintf("NOOP: Executing Script: FIXMYNAME count: %d", wp.count))
+		tr.AddLog(fmt.Sprintf("NOOP: Executing Script: FIXMYNAME"))
 	}
+
+	return generated
 }
 
-func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
+func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) string {
 
 	//check call depth - will rolling here push us over?
 	ee.callDepth++
@@ -94,8 +98,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 	//need expansion for each table it references
 	bufParts, exists := util.FindNextTableRef(buf)
 	if !exists { //expansion not needed
-		tr.AddResult(buf)
-		return
+		return buf
 	}
 
 	//here if need to expand at least one tableref
@@ -103,25 +106,22 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 	for exists { //there is at least one table ref remaining
 		sb.WriteString(bufParts[0]) //everything up to the first reference
 
-		//need to recurse here - build new work pkg & create new TableResult
-		//On return, need to add the string from TableResult to the String Builder
-		//need to add the Log entries from the TabbleResult to this TableResult
-
+		//need to recurse here so set up the new work package's common elements
 		nextWp := &workPackage{
 			repo:   wp.repo,
 			script: nil,
 		}
-		safeAndSane := false
+		safeAndSane := false //sanity checker - programming mistake trap
 
 		//what type of table ref do we have - build rest of workPkg...
 		if table.ExternalCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count = 1 //always roll once per external tables
-			nextWp.operation = "roll"
+			nextWp.operation = table.TableOpRoll
 			tableRef, err := wp.repo.TableForName(extMatches[1])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
-				return
+				return ""
 			}
 			nextWp.table = tableRef
 			safeAndSane = true
@@ -129,12 +129,12 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 		if table.InlineCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count = 1 //always roll once per internal tables
-			nextWp.operation = "roll"
+			nextWp.operation = table.TableOpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
 			tableRef, err := wp.repo.TableForName(tablename)
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
-				return
+				return ""
 			}
 			nextWp.table = tableRef
 			safeAndSane = true
@@ -142,39 +142,36 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) {
 		if table.PickCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count, _ = strconv.Atoi(extMatches[1]) //no err per regex
-			nextWp.operation = "pick"
+			nextWp.operation = table.TableOpPick
 			tableRef, err := wp.repo.TableForName(extMatches[2])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
-				return
+				return ""
 			}
 			nextWp.table = tableRef
 			safeAndSane = true
 		}
 
 		//should never happen but check anyway - if we fail here, tests and
-		//table parsing logic has gone wrong
+		//table parsing logic have gone wrong - fix yer code!
 		if !safeAndSane {
 			tr.AddLog(fmt.Sprintf("Unexpected table ref. This should NEVER happen: %s", bufParts[1]))
-			return
+			return ""
 		}
 
 		//recurse to expand the first ref found in bufParts
-		nextTr := res.NewTableResult()
-		ee.executeInternal(nextWp, nextTr)
+		generated := ee.executeInternal(nextWp, tr)
 
-		//capture the results of the recursion - add expanded string and log(s)
-		//only one result is expected unless there was a multi-pick call so
-		//handle all cases via append. We expect many logs to be present in nextTr tho
-		tr.Result = append(tr.Result, nextTr.Result...)
-		tr.Log = append(tr.Log, nextTr.Log...)
+		//capture the results of the recursion
+		sb.WriteString(generated)
 
 		//tack on that part of the buffer that hasnt been checked for references
 		sb.WriteString(bufParts[2])
 
-		bufParts, exists = util.FindNextTableRef(sb.String()) //keep expanding
+		//assemble the string - do we still have tablerefs to be expanded?
+		bufParts, exists = util.FindNextTableRef(sb.String())
 	}
-	tr.AddResult(sb.String())
+	return sb.String()
 }
 
 func (ee *executionEngine) rangeResultFromRoll(wp *workPackage, roll int) string {

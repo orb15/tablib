@@ -21,6 +21,12 @@ const (
 	definitionSection = "Definition"
 	inlineSection     = "Inline"
 	contentSection    = "Content"
+
+	//TableOpRoll represents a roll operation on a table
+	TableOpRoll = "roll"
+
+	//TableOpPick represents a pick operation on a table
+	TableOpPick = "pick"
 )
 
 //Validate ensures the table is valid and parses some aspects if it makes

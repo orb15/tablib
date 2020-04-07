@@ -54,11 +54,12 @@ func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult)
 
 	var generated string
 	switch wp.operation {
-	case table.TableOpRoll:
+	case table.OpRoll:
 		tr.AddLog(fmt.Sprintf("Executing Roll on table: %s", wp.table.Definition.Name))
 		generated = ee.executeRoll(wp, tr)
-	case table.TableOpPick:
-		tr.AddLog(fmt.Sprintf("NOOP: Executing Pick on table: %s ", wp.table.Definition.Name))
+	case table.OpPick:
+		tr.AddLog(fmt.Sprintf("Executing Pick %d on table: %s ", wp.count, wp.table.Definition.Name))
+		generated = ee.executePick(wp, tr)
 	case "script":
 		tr.AddLog(fmt.Sprintf("NOOP: Executing Script: FIXMYNAME"))
 	}
@@ -66,19 +67,65 @@ func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult)
 	return generated
 }
 
+func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) string {
+
+	//check call depth - will rolling here push us over?
+	if !ee.checkCallDepth(tr) {
+		return ""
+	}
+
+	//picking on range tables is not allowed
+	if wp.table.Definition.TableType == table.TypeRange {
+		tr.AddLog(fmt.Sprintf("Pick requested on ranged table: %s", wp.table.Definition.Name))
+		return ""
+	}
+
+	//if asking for more picks than content, return content and a warning
+	if wp.count >= len(wp.table.RawContent) {
+		tr.AddLog(fmt.Sprintf("Pick %d on table: %s requested but it has only %d entries",
+			wp.count, wp.table.Definition.Name, len(wp.table.RawContent)))
+		return strings.Join(wp.table.RawContent, ",")
+	}
+
+	//create a tracking slice to track picked values
+	//TODO: Can this be made more efficient - probably but efficiency will be in
+	//part determined by the len(content) and count.
+	type pick struct {
+		v string
+		p bool
+	}
+	pickSlice := make([]*pick, 0, wp.count)
+	for _, c := range wp.table.RawContent {
+		pickSlice = append(pickSlice, &pick{v: c, p: false})
+	}
+
+	//do the picks
+	remaining := wp.count
+	length := len(pickSlice)
+	outSlice := make([]string, 0, wp.count)
+	for remaining > 0 {
+		picked := ee.rnd.Intn(length)
+		if !pickSlice[picked].p {
+			pickSlice[picked].p = true
+			remaining--
+			outSlice = append(outSlice, pickSlice[picked].v)
+		}
+	}
+	return strings.Join(outSlice, ",")
+}
+
 func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) string {
 
 	//check call depth - will rolling here push us over?
-	ee.callDepth++
-	if ee.callDepth > defaultMaxCallDepth {
-		tr.AddLog(fmt.Sprintf("Unable to roll on table, max call depth of: %d exceeded", defaultMaxCallDepth))
+	if !ee.checkCallDepth(tr) {
+		return ""
 	}
 
 	//roll on the table
 	var rolledValue int
 	var buf string
 	switch wp.table.Definition.TableType {
-	case "flat": //flat tables need a dice parse result, range tables already have one
+	case table.TypeFlat: //flat tables need a dice parse result, range tables already have one
 		dpr := &dice.ParseResult{
 			Count:   1,
 			DieType: len(wp.table.RawContent),
@@ -88,7 +135,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		rolledValue = ee.rollDice(dp)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
 		buf = wp.table.RawContent[rolledValue-1]
-	case "range":
+	case table.TypeRange:
 		rolledValue = ee.rollDice(wp.table.Definition.DiceParsed)
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
 		buf = ee.rangeResultFromRoll(wp, rolledValue)
@@ -117,7 +164,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		if table.ExternalCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count = 1 //always roll once per external tables
-			nextWp.operation = table.TableOpRoll
+			nextWp.operation = table.OpRoll
 			tableRef, err := wp.repo.TableForName(extMatches[1])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
@@ -129,7 +176,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		if table.InlineCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count = 1 //always roll once per internal tables
-			nextWp.operation = table.TableOpRoll
+			nextWp.operation = table.OpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
 			tableRef, err := wp.repo.TableForName(tablename)
 			if err != nil {
@@ -142,7 +189,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		if table.PickCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count, _ = strconv.Atoi(extMatches[1]) //no err per regex
-			nextWp.operation = table.TableOpPick
+			nextWp.operation = table.OpPick
 			tableRef, err := wp.repo.TableForName(extMatches[2])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
@@ -233,4 +280,13 @@ func (ee *executionEngine) rollDice(dpr []*dice.ParseResult) int {
 		}
 	}
 	return total
+}
+
+func (ee *executionEngine) checkCallDepth(tr *res.TableResult) bool {
+	ee.callDepth++
+	if ee.callDepth > defaultMaxCallDepth {
+		tr.AddLog(fmt.Sprintf("Unable to roll on table, max call depth of: %d exceeded", defaultMaxCallDepth))
+		return false
+	}
+	return true
 }

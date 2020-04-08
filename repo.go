@@ -105,12 +105,12 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string) error {
 
 func (cr *concreteTableRepo) List(objectName string) (string, error) {
 	cr.lock.RLock()
-	defer cr.lock.Unlock()
+	defer cr.lock.RUnlock()
 	return "", nil
 }
 func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*SearchResult {
 	cr.lock.RLock()
-	defer cr.lock.Unlock()
+	defer cr.lock.RUnlock()
 	return make([]*SearchResult, 0)
 }
 func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresult.TableResult {
@@ -138,17 +138,38 @@ func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresu
 
 func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.TableResult {
 	cr.lock.RLock()
-	defer cr.lock.Unlock()
-	return nil
+	defer cr.lock.RUnlock()
+
+	tr := tableresult.NewTableResult()
+	tbl, found := cr.tableStore[tableName]
+	if !found {
+		tr.AddLog(fmt.Sprintf("Table: %s does not exist", tableName))
+		return tr
+	}
+
+	wp := &workPackage{
+		repo:      cr,
+		table:     tbl.parsedTable,
+		script:    nil,
+		operation: "roll",
+		count:     1,
+		pickCount: count,
+	}
+	exeng := newExecutionEngine()
+	exeng.execute(wp, tr)
+	return tr
 }
 
 func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, error) {
 	cr.lock.RLock()
-	defer cr.lock.Unlock()
+	defer cr.lock.RUnlock()
 	return make(map[string]string), nil
 }
 
 func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
+	cr.lock.RLock()
+	defer cr.lock.RUnlock()
+
 	tbl, found := cr.tableStore[name]
 	if !found {
 		return nil, fmt.Errorf("Table does not exist: %s", name)

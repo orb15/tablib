@@ -17,7 +17,7 @@ import (
 const (
 	//max number of table subcalls before we punt on possible recursion
 	//this should ultimately be a config param
-	defaultMaxCallDepth = 25
+	defaultMaxCallDepth = 10
 )
 
 type workPackage struct {
@@ -26,6 +26,7 @@ type workPackage struct {
 	script    *lua.FunctionProto
 	operation string
 	count     int
+	pickCount int
 }
 
 type executionEngine struct {
@@ -44,6 +45,7 @@ func (ee *executionEngine) execute(wp *workPackage, tr *res.TableResult) {
 	for i := 1; i <= wp.count; i++ {
 		generated := ee.executeInternal(wp, tr)
 		tr.AddResult(generated)
+		ee.callDepth = 0 //reset calldepth for next execution
 	}
 }
 
@@ -81,7 +83,7 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 	}
 
 	//if asking for more picks than content, return content and a warning
-	if wp.count >= len(wp.table.RawContent) {
+	if wp.pickCount >= len(wp.table.RawContent) {
 		tr.AddLog(fmt.Sprintf("Pick %d on table: %s requested but it has only %d entries",
 			wp.count, wp.table.Definition.Name, len(wp.table.RawContent)))
 		return strings.Join(wp.table.RawContent, ",")
@@ -94,15 +96,15 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 		v string
 		p bool
 	}
-	pickSlice := make([]*pick, 0, wp.count)
+	pickSlice := make([]*pick, 0, wp.pickCount)
 	for _, c := range wp.table.RawContent {
 		pickSlice = append(pickSlice, &pick{v: c, p: false})
 	}
 
 	//do the picks
-	remaining := wp.count
+	remaining := wp.pickCount
 	length := len(pickSlice)
-	outSlice := make([]string, 0, wp.count)
+	outSlice := make([]string, 0, wp.pickCount)
 	for remaining > 0 {
 		picked := ee.rnd.Intn(length)
 		if !pickSlice[picked].p {
@@ -151,6 +153,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 	//here if need to expand at least one tableref
 	var sb strings.Builder
 	for exists { //there is at least one table ref remaining
+		sb.Reset()
 		sb.WriteString(bufParts[0]) //everything up to the first reference
 
 		//need to recurse here so set up the new work package's common elements
@@ -175,7 +178,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		}
 		if table.InlineCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1])
-			nextWp.count = 1 //always roll once per internal tables
+			nextWp.count = 1 //always roll once on internal tables
 			nextWp.operation = table.OpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
 			tableRef, err := wp.repo.TableForName(tablename)
@@ -188,7 +191,8 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		}
 		if table.PickCalledPattern.MatchString(bufParts[1]) {
 			extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1])
-			nextWp.count, _ = strconv.Atoi(extMatches[1]) //no err per regex
+			nextWp.pickCount, _ = strconv.Atoi(extMatches[1]) //no err per regex
+			nextWp.count = 1                                  //always roll once on pick requests
 			nextWp.operation = table.OpPick
 			tableRef, err := wp.repo.TableForName(extMatches[2])
 			if err != nil {
@@ -216,7 +220,8 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		sb.WriteString(bufParts[2])
 
 		//assemble the string - do we still have tablerefs to be expanded?
-		bufParts, exists = util.FindNextTableRef(sb.String())
+		replacedString := sb.String()
+		bufParts, exists = util.FindNextTableRef(replacedString)
 	}
 	return sb.String()
 }

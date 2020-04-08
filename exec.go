@@ -60,7 +60,7 @@ func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult)
 		tr.AddLog(fmt.Sprintf("Executing Roll on table: %s", wp.table.Definition.Name))
 		generated = ee.executeRoll(wp, tr)
 	case table.OpPick:
-		tr.AddLog(fmt.Sprintf("Executing Pick %d on table: %s ", wp.count, wp.table.Definition.Name))
+		tr.AddLog(fmt.Sprintf("Executing Pick %d on table: %s ", wp.pickCount, wp.table.Definition.Name))
 		generated = ee.executePick(wp, tr)
 	case "script":
 		tr.AddLog(fmt.Sprintf("NOOP: Executing Script: FIXMYNAME"))
@@ -113,7 +113,8 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 			outSlice = append(outSlice, pickSlice[picked].v)
 		}
 	}
-	return strings.Join(outSlice, ",")
+	buf := strings.Join(outSlice, ",")
+	return ee.expandAllRefs(buf, wp, tr) //recurse in case this generate table refs
 }
 
 func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) string {
@@ -142,9 +143,12 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
 		buf = ee.rangeResultFromRoll(wp, rolledValue)
 	}
+	return ee.expandAllRefs(buf, wp, tr)
+}
 
-	//at this point, we have a random string stored in the buf string - but it may
-	//need expansion for each table it references
+func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.TableResult) string {
+
+	//buf may need tablerefs expanded, check that first
 	bufParts, exists := util.FindNextTableRef(buf)
 	if !exists { //expansion not needed
 		return buf

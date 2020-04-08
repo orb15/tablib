@@ -54,7 +54,13 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationRes
 	cr.lock.Lock()
 	defer cr.lock.Unlock()
 
-	//store the table in the repo
+	//do not store the table in the repo if it is invalid (but do store if
+	//the table has warnings
+	if !validationResults.Valid() {
+		return validationResults, nil
+	}
+
+	//put the valid table in the repo
 	fullName := util.BuildFullName(table.Definition.Name, "")
 	cr.tableStore[fullName] = &tableData{
 		yamlSource:  string(yamlBytes),

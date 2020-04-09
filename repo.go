@@ -184,6 +184,43 @@ func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.Tabl
 func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, error) {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
+
+	//set up a new lua VM
+	lState := lua.NewState()
+	defer lState.Close()
+
+	//tell the lua VM about the go code we are exposing to it
+	luaMod := newLuaModule(cr)
+	lState.PreloadModule("tables", luaMod.luaModuleLoader)
+
+	//fetch the precompiled lua script by name
+	scriptData, found := cr.scriptStore[scriptName]
+	if !found {
+		return map[string]string{"Error": "Script not found!"}, nil
+	}
+
+	//execute the lua script - all this does is store the precompiled code
+	//in lState and await our call of a lua function it defines
+	luafunc := lState.NewFunctionFromProto(scriptData.parsedScript)
+	lState.Push(luafunc)
+	err := lState.PCall(0, lua.MultRet, nil)
+	if err != nil {
+		return map[string]string{"Error loading compiled script": fmt.Sprintf("%v", err)}, nil
+	}
+
+	//call the well-known function "main" which is the 'main' for our lua script
+	if err := lState.CallByParam(lua.P{
+		Fn:      lState.GetGlobal("main"),
+		NRet:    1,
+		Protect: true,
+	}); err != nil {
+		return map[string]string{"Error executing main()": fmt.Sprintf("%v", err)}, nil
+	}
+	retval := lState.ToString(1)
+	lState.Pop(1) // remove received value
+
+	fmt.Printf("Got back: %s\n", retval)
+
 	return make(map[string]string), nil
 }
 

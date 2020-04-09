@@ -151,6 +151,8 @@ func TestTestInlineValidation_shouldConvertInlineTableToInternalFormat(t *testin
       content:
         - Rare
         - Extremely Rare
+        - Hyper Rare
+        - Pretty damned rare if you ask me
     - id: 2
       content:
         - foo
@@ -162,6 +164,13 @@ func TestTestInlineValidation_shouldConvertInlineTableToInternalFormat(t *testin
 	failOnErrors(vr, t)
 
 	equals(len(tb.Inline), 2, t)
+	equals(tb.Inline[0].ID, "1", t)
+	equals(tb.Inline[0].FullyQualifiedName, "TestTable_Flat.1", t)
+	equals(len(tb.Inline[0].Content), 4, t)
+	equals(tb.Inline[0].Content[0], "Rare", t)
+	equals(tb.Inline[0].Content[1], "Extremely Rare", t)
+	equals(tb.Inline[0].Content[2], "Hyper Rare", t)
+	equals(tb.Inline[0].Content[3], "Pretty damned rare if you ask me", t)
 	equals(tb.Inline[1].ID, "2", t)
 	equals(tb.Inline[1].FullyQualifiedName, "TestTable_Flat.2", t)
 	equals(len(tb.Inline[1].Content), 2, t)

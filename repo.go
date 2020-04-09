@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"tablib/dice"
 	"tablib/table"
 	"tablib/tableresult"
 	"tablib/util"
@@ -33,49 +34,63 @@ type concreteTableRepo struct {
 
 func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationResult, error) {
 
-	//not locking repo here so parse + validate can be multithreaded if caller desires
-
-	var table *table.Table
+	//Note: not locking repo here so parse + validate can be multithreaded if caller desires
 
 	//is this even valid YAML?
-	err := yaml.Unmarshal(yamlBytes, &table)
+	var tbl *table.Table
+	err := yaml.Unmarshal(yamlBytes, &tbl)
 	if err != nil {
 		return nil, err
 	}
 
 	//validate the table and parse portions of it since we are tearing the table
 	//apart to do the validation anyway
-	validationResults := table.Validate()
+	validationResults := tbl.Validate()
 
 	//by definition, tables that arrive here are not inline tables
-	table.IsInlineTable = false
+	tbl.IsInlineTable = false
+
+	//do not proceed if the table is invalid (but its ok if there are warnings)
+	if !validationResults.Valid() {
+		return validationResults, nil
+	}
+
+	//add dice information to flat tables since we need to roll on them
+	if tbl.Definition.TableType == table.TypeFlat {
+		addDiceParseResultForFlatAndInlineTables(tbl)
+	}
+
+	//build out inline tables in this table as first-class tables, then validate
+	//the inline content for proper tablerefs
+	var inlines []*table.Table
+	if len(tbl.Inline) > 0 {
+		inlines = extractInlineTables(tbl)
+		for _, ilt := range inlines {
+			ilt.ValidateContent(validationResults)
+		}
+	}
+
+	//final validity check to prevent storing a bad table in the repo
+	if !validationResults.Valid() {
+		return validationResults, nil
+	}
 
 	//lock the repo now since we will write to it
 	cr.lock.Lock()
 	defer cr.lock.Unlock()
 
-	//do not store the table in the repo if it is invalid (but do store if
-	//the table has warnings
-	if !validationResults.Valid() {
-		return validationResults, nil
-	}
-
 	//put the valid table in the repo
-	fullName := util.BuildFullName(table.Definition.Name, "")
+	fullName := util.BuildFullName(tbl.Definition.Name, "")
 	cr.tableStore[fullName] = &tableData{
 		yamlSource:  string(yamlBytes),
-		parsedTable: table,
+		parsedTable: tbl,
 	}
 
-	//if the table has any inline tables, add these as well - inline
-	//tables will be first-class 'flat' tables now
-	if len(table.Inline) > 0 {
-		inlines := extractInlineTables(table)
-		for _, ilt := range inlines {
-			cr.tableStore[ilt.Definition.Name] = &tableData{
-				yamlSource:  "",
-				parsedTable: ilt,
-			}
+	//store the inline tables for this table as first-class tables
+	for _, ilt := range inlines {
+		cr.tableStore[ilt.Definition.Name] = &tableData{
+			yamlSource:  "",
+			parsedTable: ilt,
 		}
 	}
 
@@ -134,7 +149,7 @@ func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresu
 		repo:      cr,
 		table:     tbl.parsedTable,
 		script:    nil,
-		operation: "roll",
+		operation: table.OpRoll,
 		count:     execsDesired,
 	}
 	exeng := newExecutionEngine()
@@ -157,7 +172,7 @@ func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.Tabl
 		repo:      cr,
 		table:     tbl.parsedTable,
 		script:    nil,
-		operation: "roll",
+		operation: table.OpRoll,
 		count:     1,
 		pickCount: count,
 	}
@@ -190,10 +205,10 @@ func extractInlineTables(mainTable *table.Table) []*table.Table {
 
 		def := &table.DefinitionPart{
 			Name:      ilt.FullyQualifiedName,
-			TableType: "flat",
+			TableType: table.TypeFlat,
 		}
 
-		content := make([]string, len(ilt.Content))
+		content := make([]string, 0, len(ilt.Content))
 		for _, c := range ilt.Content {
 			content = append(content, c)
 		}
@@ -204,7 +219,20 @@ func extractInlineTables(mainTable *table.Table) []*table.Table {
 			IsValid:       true,
 			IsInlineTable: true,
 		}
+
+		//add dice info to this inline table since we need to roll on it
+		addDiceParseResultForFlatAndInlineTables(tbl)
 		inlinesAsTables = append(inlinesAsTables, tbl)
 	}
 	return inlinesAsTables
+}
+
+func addDiceParseResultForFlatAndInlineTables(tbl *table.Table) {
+	dpr := &dice.ParseResult{
+		Count:   1,
+		DieType: len(tbl.RawContent),
+	}
+	dp := make([]*dice.ParseResult, 1, 1)
+	dp[0] = dpr
+	tbl.Definition.DiceParsed = dp
 }

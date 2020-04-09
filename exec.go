@@ -125,22 +125,15 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 	}
 
 	//roll on the table
-	var rolledValue int
+	rolledValue := ee.rollDice(wp.table.Definition.DiceParsed)
+	tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
+
+	//interpret the roll based on table type
 	var buf string
 	switch wp.table.Definition.TableType {
-	case table.TypeFlat: //flat tables need a dice parse result, range tables already have one
-		dpr := &dice.ParseResult{
-			Count:   1,
-			DieType: len(wp.table.RawContent),
-		}
-		dp := make([]*dice.ParseResult, 1, 1)
-		dp[0] = dpr
-		rolledValue = ee.rollDice(dp)
-		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
+	case table.TypeFlat:
 		buf = wp.table.RawContent[rolledValue-1]
 	case table.TypeRange:
-		rolledValue = ee.rollDice(wp.table.Definition.DiceParsed)
-		tr.AddLog(fmt.Sprintf("Rolled: %d", rolledValue))
 		buf = ee.rangeResultFromRoll(wp, rolledValue)
 	}
 	return ee.expandAllRefs(buf, wp, tr)

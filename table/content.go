@@ -17,7 +17,8 @@ var (
 	PickCalledPattern = regexp.MustCompile("\\{([0-9]+)!(.*)\\}")
 )
 
-func (t *Table) validateContent(vr *validate.ValidationResult) {
+//ValidateContent ensures the content portion of the table is well-formed
+func (t *Table) ValidateContent(vr *validate.ValidationResult) {
 
 	//content section must exist
 	if len(t.RawContent) == 0 {
@@ -45,13 +46,13 @@ func (t *Table) validateContent(vr *validate.ValidationResult) {
 	//allContent contains the actual content of the table. Ensure all tablerefs
 	//are valid
 	for _, c := range allContent {
-		t.validateContentTableRefPairs(c, vr) //do we have close {}?
+		t.validateContentTableRefPairs(c, vr) //do we have closed {}?
 	}
 
 	//at this point we can check for valid table refs - if no failures so far
 	if vr.Valid() {
 		for _, c := range allContent {
-			t.validateContentTableRefs(c, vr) //do we have close {}?
+			t.validateContentTableRefs(c, vr) //do we have valid tableref syntax?
 		}
 	}
 }

@@ -56,7 +56,7 @@ func (t *Table) Validate() *validate.ValidationResult {
 
 	//the table is reasonably valid at this point, check content
 	if vr.Valid() {
-		t.validateContent(vr)
+		t.ValidateContent(vr)
 	}
 
 	//have there been any actual validation errors? If so, mark table as Invalid

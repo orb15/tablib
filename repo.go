@@ -10,7 +10,7 @@ import (
 	"tablib/util"
 	"tablib/validate"
 
-	lua "github.com/yuin/gopher-lua"
+	"github.com/yuin/gopher-lua"
 	"github.com/yuin/gopher-lua/parse"
 
 	yaml "gopkg.in/yaml.v2"
@@ -199,8 +199,8 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 		return map[string]string{"Error": "Script not found!"}, nil
 	}
 
-	//execute the lua script - all this does is store the precompiled code
-	//in lState and await our call of a lua function it defines
+	//prep the lua script - all this does is store the precompiled code
+	//in lState and await our call to lua functions it defines
 	luafunc := lState.NewFunctionFromProto(scriptData.parsedScript)
 	lState.Push(luafunc)
 	err := lState.PCall(0, lua.MultRet, nil)
@@ -208,12 +208,25 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 		return map[string]string{"Error loading compiled script": fmt.Sprintf("%v", err)}, nil
 	}
 
+	//TODO: here we need to call another well-known function to get info about
+	//the params the main code needs to do its job. Once we get these, this
+	//method (Execute) will need to utilize a callback function (a param passed in)
+	//to request the param values from the caller of this lib.
+
+	//For sanity sake, all lua functions should take and return a single well-known
+	//type so we always know the size of the argument list being passed or
+	//returned
+
+	ldm := make(map[string]string)
+	ldm["p1"] = "v1"
+	ldm["p2"] = "v2"
+
 	//call the well-known function "main" which is the 'main' for our lua script
 	if err := lState.CallByParam(lua.P{
 		Fn:      lState.GetGlobal("main"),
 		NRet:    1,
 		Protect: true,
-	}); err != nil {
+	}, toLuaLTable(ldm)); err != nil {
 		return map[string]string{"Error executing main()": fmt.Sprintf("%v", err)}, nil
 	}
 	retval := lState.ToString(1)
@@ -272,4 +285,12 @@ func addDiceParseResultForFlatAndInlineTables(tbl *table.Table) {
 	dp := make([]*dice.ParseResult, 1, 1)
 	dp[0] = dpr
 	tbl.Definition.DiceParsed = dp
+}
+
+func toLuaLTable(goMap map[string]string) *lua.LTable {
+	ltbl := &lua.LTable{}
+	for k, v := range goMap {
+		ltbl.RawSetString(k, lua.LString(v))
+	}
+	return ltbl
 }

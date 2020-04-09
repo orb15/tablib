@@ -23,7 +23,7 @@ func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 	//function as it is exposed to lua and the value is a pointer to an LGFunction
 	//(a function type specified in the gopher-lua lib)
 	exportedGoFuncs := map[string]lua.LGFunction{
-		"roll": lm.RollOnTable,
+		"roll": lm.rollOnTable,
 	}
 
 	//make certain functions available to lua
@@ -35,7 +35,7 @@ func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 }
 
 //RollOnTable is the lua-visible wrapper function for TableRepository.Roll()
-func (lm *luaModule) RollOnTable(lState *lua.LState) int {
+func (lm *luaModule) rollOnTable(lState *lua.LState) int {
 
 	//confirm arg is a single string and convert it to a Go string
 	argCount := lState.GetTop() //gets count of args passed onto stack

@@ -16,7 +16,7 @@ func newLuaModule(r TableRepository) *luaModule {
 	}
 }
 
-//LuaModuleLoader registers functions with the lua runtime
+//luaModuleLoader registers functions with the lua runtime
 func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 
 	//this map defines functions visible to lua. the key is the name of the
@@ -34,7 +34,7 @@ func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 	return 1
 }
 
-//RollOnTable is the lua-visible wrapper function for TableRepository.Roll()
+//rollOnTable is the lua-visible wrapper function for TableRepository.Roll()
 func (lm *luaModule) rollOnTable(lState *lua.LState) int {
 
 	//confirm arg is a single string and convert it to a Go string

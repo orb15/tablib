@@ -205,36 +205,39 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 	lState.Push(luafunc)
 	err := lState.PCall(0, lua.MultRet, nil)
 	if err != nil {
-		return map[string]string{"Error loading compiled script": fmt.Sprintf("%v", err)}, nil
+		return createErrorMap(scriptName,
+			fmt.Sprintf("fail to load loading compiled script: %s", err)), nil
 	}
 
 	//TODO: here we need to call another well-known function to get info about
 	//the params the main code needs to do its job. Once we get these, this
-	//method (Execute) will need to utilize a callback function (a param passed in)
+	//method (Execute) will need to utilize a callback function (needs passed in)
 	//to request the param values from the caller of this lib.
 
 	//For sanity sake, all lua functions should take and return a single well-known
 	//type so we always know the size of the argument list being passed or
 	//returned
 
-	ldm := make(map[string]string)
+	ldm := make(map[string]string) //hack: make up params to pass for now
 	ldm["p1"] = "v1"
 	ldm["p2"] = "v2"
 
 	//call the well-known function "main" which is the 'main' for our lua script
 	if err := lState.CallByParam(lua.P{
 		Fn:      lState.GetGlobal("main"),
-		NRet:    1,
+		NRet:    0,
 		Protect: true,
 	}, toLuaLTable(ldm)); err != nil {
-		return map[string]string{"Error executing main()": fmt.Sprintf("%v", err)}, nil
+		if err != nil {
+			return createErrorMap(scriptName, fmt.Sprintf("executing main(): %s", err)), nil
+		}
 	}
-	retval := lState.ToString(1)
-	lState.Pop(1) // remove received value
 
-	fmt.Printf("Got back: %s\n", retval)
+	//retrieve the well-known return value from lua
+	retval := lState.GetGlobal("rettbl")
+	retmap := fromLuaTable(scriptName, lState, retval)
 
-	return make(map[string]string), nil
+	return retmap, nil
 }
 
 func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
@@ -293,4 +296,29 @@ func toLuaLTable(goMap map[string]string) *lua.LTable {
 		ltbl.RawSetString(k, lua.LString(v))
 	}
 	return ltbl
+}
+
+func fromLuaTable(scriptName string, lState *lua.LState, lVal lua.LValue) map[string]string {
+
+	//do we really have an LTable in the passed LValue?
+	if lVal.Type() != lua.LTTable {
+		return createErrorMap(scriptName,
+			"script does not contain required return table variable 'rettbl'")
+	}
+	luaTable := lVal.(*lua.LTable)
+
+	mp := make(map[string]string)
+
+	luaTable.ForEach(func(k lua.LValue, v lua.LValue) {
+		key := k.String()
+		val := v.String()
+		mp[key] = val
+	})
+	return mp
+}
+
+func createErrorMap(scriptName, details string) map[string]string {
+	errMap := make(map[string]string)
+	errMap["Script-Error"] = details
+	return errMap
 }

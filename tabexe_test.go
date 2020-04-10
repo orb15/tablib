@@ -14,7 +14,8 @@ const (
 func TestRollDice_shouldCalcProperly(t *testing.T) {
 
 	//this is not the Worlds Greatest Test but it does stress the code a bit
-	//and will find glaring issues (Idx oo B, obvious algo errors)
+	//and will find glaring issues (Idx oo Bounds, obvious algo errors)
+	//it is hard to test randomizers...
 	data := []*rollTestData{toRTD("1d6", 1, 6), toRTD("3d6", 3, 18),
 		toRTD("3d6 - 3", 0, 15), toRTD("1d6 * 100", 100, 600), toRTD("3d1", 3, 3),
 		toRTD("3d1 + 3", 6, 6), toRTD("1d1 - 7", -6, -6), toRTD("1d1 - 1d1 * 2", 0, 0)}
@@ -22,7 +23,11 @@ func TestRollDice_shouldCalcProperly(t *testing.T) {
 
 	for i := 1; i <= diceCycleCount; i++ {
 		for _, d := range data {
-			dpr := dice.ValidateDiceExpr(d.expr, "TestSection", validate.NewValidationResult())
+			vr := validate.NewValidationResult()
+			dpr := dice.ValidateDiceExpr(d.expr, "TestSection", vr)
+			if !vr.Valid() {
+				t.Errorf("Bad test case: %s has error: %s", d.expr, vr.Errors[0])
+			}
 			total := ee.rollDice(dpr)
 			if total < d.low || total > d.high {
 				t.Errorf("Roll of: %s generated an unexpected result: %d", d.expr, total)

@@ -78,13 +78,13 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 
 	//check call depth - will rolling here push us over?
 	if !ee.checkCallDepth(tr) {
-		return ""
+		return "Call depth exceeded!"
 	}
 
 	//picking on range tables is not allowed
 	if wp.table.Definition.TableType == table.TypeRange {
 		tr.AddLog(fmt.Sprintf("Pick requested on ranged table: %s", wp.table.Definition.Name))
-		return ""
+		return "Pick on range table not allowed"
 	}
 
 	//if asking for more picks than content, return content and a warning

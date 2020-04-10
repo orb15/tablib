@@ -175,7 +175,7 @@ func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.Tabl
 	wp := &workPackage{
 		nameSvc:   cr,
 		table:     tbl.parsedTable,
-		operation: table.OpRoll,
+		operation: table.OpPick,
 		count:     1,
 		pickCount: count,
 	}

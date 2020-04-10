@@ -185,7 +185,11 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 
+	//TODO: move all this to the execution engine, including helper methods
+
 	//set up a new lua VM
+	//TODO: limit call stack and repository sizes, prevent use of lua modules
+	//that allow access to OS, filesys or other dangerous crap
 	lState := lua.NewState()
 	defer lState.Close()
 
@@ -209,14 +213,14 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 			fmt.Sprintf("fail to load loading compiled script: %s", err)), nil
 	}
 
-	//TODO: here we need to call another well-known function to get info about
-	//the params the main code needs to do its job. Once we get these, this
+	//TODO: here we need to call well-known lua function to get info about
+	//the params the lua main() code needs to do its job. Once we get these, this
 	//method (Execute) will need to utilize a callback function (needs passed in)
 	//to request the param values from the caller of this lib.
 
 	//For sanity sake, all lua functions should take and return a single well-known
 	//type so we always know the size of the argument list being passed or
-	//returned
+	//returned. A map[string]string is sufficent and simple to handle
 
 	ldm := make(map[string]string) //hack: make up params to pass for now
 	ldm["p1"] = "v1"
@@ -240,6 +244,7 @@ func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, erro
 	return retmap, nil
 }
 
+//TableForName returns the underlying table for give table name
 func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
@@ -251,7 +256,8 @@ func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
 	return tbl.parsedTable, nil
 }
 
-//for each inline table in a table, create a full-featured table
+//for each inline table in a table, create a full-featured table. this
+//enables inline lookups to be handled like any other table ref during execution
 func extractInlineTables(mainTable *table.Table) []*table.Table {
 	inlinesAsTables := make([]*table.Table, 0, len(mainTable.Inline))
 	for _, ilt := range mainTable.Inline {
@@ -280,6 +286,9 @@ func extractInlineTables(mainTable *table.Table) []*table.Table {
 	return inlinesAsTables
 }
 
+//creates parsed dice info to make rolling on the flat or inline
+//table easier at exection - now these table types have dice info
+//just as if they were ranged tables
 func addDiceParseResultForFlatAndInlineTables(tbl *table.Table) {
 	dpr := &dice.ParseResult{
 		Count:   1,
@@ -290,6 +299,7 @@ func addDiceParseResultForFlatAndInlineTables(tbl *table.Table) {
 	tbl.Definition.DiceParsed = dp
 }
 
+//converts a go map to a lua LTable
 func toLuaLTable(goMap map[string]string) *lua.LTable {
 	ltbl := &lua.LTable{}
 	for k, v := range goMap {
@@ -298,6 +308,7 @@ func toLuaLTable(goMap map[string]string) *lua.LTable {
 	return ltbl
 }
 
+//converts a lua LTable to a go map
 func fromLuaTable(scriptName string, lState *lua.LState, lVal lua.LValue) map[string]string {
 
 	//do we really have an LTable in the passed LValue?
@@ -317,6 +328,7 @@ func fromLuaTable(scriptName string, lState *lua.LState, lVal lua.LValue) map[st
 	return mp
 }
 
+//helper to uniformly return errors during script execution
 func createErrorMap(scriptName, details string) map[string]string {
 	errMap := make(map[string]string)
 	errMap["Script-Error"] = details

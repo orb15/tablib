@@ -30,7 +30,7 @@ type workPackage struct {
 }
 
 type executionEngine struct {
-	callDepth int //number of table calls - prevent recursion with a hammer
+	callDepth int //number of table calls - prevent malicious or inadvertent recursion with a hammer
 	rnd       *rand.Rand
 }
 
@@ -223,6 +223,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 	return sb.String()
 }
 
+//use the result of a roll to determine which ranged content item should be returned
 func (ee *executionEngine) rangeResultFromRoll(wp *workPackage, roll int) string {
 	for _, rc := range wp.table.RangeContent {
 		if roll >= rc.Low && roll <= rc.High {
@@ -239,13 +240,18 @@ func (ee *executionEngine) rangeResultFromRoll(wp *workPackage, roll int) string
 	return msg
 }
 
+//executes a dice roll as specified in the dice parsed result
 func (ee *executionEngine) rollDice(dpr []*dice.ParseResult) int {
 	//this algo could be made faster. It is written this way for debugging and
-	//clarity. Optimizing for speed is not a requirement of this lib
+	//clarity. Optimizing for speed is not a requirement of this lib at least for now
+
+	//step 1: roll each die expression and push those results independently
+	//into a slice. Furthermore, gather the operation meant to join each die result
+	//to the one following
 
 	//store the result of each die expression in a slice
-	values := make([]int, len(dpr), len(dpr))
-	ops := make([]string, len(dpr), len(dpr))
+	values := make([]int, len(dpr), len(dpr)) //each roll's
+	ops := make([]string, len(dpr), len(dpr)) //its assoc operator
 	i := 0
 	for _, d := range dpr {
 		//handle constant at end eg 2d6 + 3
@@ -265,10 +271,10 @@ func (ee *executionEngine) rollDice(dpr []*dice.ParseResult) int {
 		i++
 	}
 
-	//utilize the operators between each die expression to calc the total
+	//step2: utilize the operators between each die expression to calc the total
 	total := 0
 	for i := 0; i < len(values); i++ {
-		if i == 0 {
+		if i == 0 { //the first value rolled is always the initial total
 			total += values[0]
 			continue
 		}
@@ -284,6 +290,7 @@ func (ee *executionEngine) rollDice(dpr []*dice.ParseResult) int {
 	return total
 }
 
+//determine if we have had too many table refs and need to punt
 func (ee *executionEngine) checkCallDepth(tr *res.TableResult) bool {
 	ee.callDepth++
 	if ee.callDepth > defaultMaxCallDepth {

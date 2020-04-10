@@ -32,6 +32,11 @@ type concreteTableRepo struct {
 	lock        *sync.RWMutex
 }
 
+type nameResolver interface {
+	tableForName(name string) (*table.Table, error)
+	scriptForName(name string) (*lua.FunctionProto, error)
+}
+
 func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationResult, error) {
 
 	//Note: not locking repo here so parse + validate can be multithreaded if caller desires
@@ -146,9 +151,8 @@ func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresu
 	}
 
 	wp := &workPackage{
-		repo:      cr,
+		nameSvc:   cr,
 		table:     tbl.parsedTable,
-		script:    nil,
 		operation: table.OpRoll,
 		count:     execsDesired,
 	}
@@ -169,9 +173,8 @@ func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.Tabl
 	}
 
 	wp := &workPackage{
-		repo:      cr,
+		nameSvc:   cr,
 		table:     tbl.parsedTable,
-		script:    nil,
 		operation: table.OpRoll,
 		count:     1,
 		pickCount: count,
@@ -181,79 +184,35 @@ func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.Tabl
 	return tr
 }
 
-func (cr *concreteTableRepo) Execute(scriptName string) (map[string]string, error) {
+func (cr *concreteTableRepo) Execute(scriptName string) map[string]string {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 
-	//TODO: move all this to the execution engine, including helper methods
-
-	//set up a new lua VM
-	//TODO: limit call stack and repository sizes, prevent use of lua modules
-	//that allow access to OS, filesys or other dangerous crap
-	lState := lua.NewState()
-	defer lState.Close()
-
-	//tell the lua VM about the go code we are exposing to it
-	luaMod := newLuaModule(cr)
-	lState.PreloadModule("tables", luaMod.luaModuleLoader)
-
-	//fetch the precompiled lua script by name
-	scriptData, found := cr.scriptStore[scriptName]
-	if !found {
-		return map[string]string{"Error": "Script not found!"}, nil
-	}
-
-	//prep the lua script - all this does is store the precompiled code
-	//in lState and await our call to lua functions it defines
-	luafunc := lState.NewFunctionFromProto(scriptData.parsedScript)
-	lState.Push(luafunc)
-	err := lState.PCall(0, lua.MultRet, nil)
-	if err != nil {
-		return createErrorMap(scriptName,
-			fmt.Sprintf("fail to load loading compiled script: %s", err)), nil
-	}
-
-	//TODO: here we need to call well-known lua function to get info about
-	//the params the lua main() code needs to do its job. Once we get these, this
-	//method (Execute) will need to utilize a callback function (needs passed in)
-	//to request the param values from the caller of this lib.
-
-	//For sanity sake, all lua functions should take and return a single well-known
-	//type so we always know the size of the argument list being passed or
-	//returned. A map[string]string is sufficent and simple to handle
-
-	ldm := make(map[string]string) //hack: make up params to pass for now
-	ldm["p1"] = "v1"
-	ldm["p2"] = "v2"
-
-	//call the well-known function "main" which is the 'main' for our lua script
-	if err := lState.CallByParam(lua.P{
-		Fn:      lState.GetGlobal("main"),
-		NRet:    0,
-		Protect: true,
-	}, toLuaLTable(ldm)); err != nil {
-		if err != nil {
-			return createErrorMap(scriptName, fmt.Sprintf("executing main(): %s", err)), nil
-		}
-	}
-
-	//retrieve the well-known return value from lua
-	retval := lState.GetGlobal("rettbl")
-	retmap := fromLuaTable(scriptName, lState, retval)
-
-	return retmap, nil
+	return executeScript(scriptName, cr, cr)
 }
 
-//TableForName returns the underlying table for give table name
-func (cr *concreteTableRepo) TableForName(name string) (*table.Table, error) {
+//tableForName returns the underlying table for give table name
+func (cr *concreteTableRepo) tableForName(name string) (*table.Table, error) {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 
-	tbl, found := cr.tableStore[name]
+	tblData, found := cr.tableStore[name]
 	if !found {
 		return nil, fmt.Errorf("Table does not exist: %s", name)
 	}
-	return tbl.parsedTable, nil
+	return tblData.parsedTable, nil
+}
+
+//scriptForName returns the underlying compiled script for give table name
+func (cr *concreteTableRepo) scriptForName(name string) (*lua.FunctionProto, error) {
+	cr.lock.RLock()
+	defer cr.lock.RUnlock()
+
+	scriptData, found := cr.scriptStore[name]
+	if !found {
+		return nil, fmt.Errorf("Script does not exist: %s", name)
+	}
+	return scriptData.parsedScript, nil
 }
 
 //for each inline table in a table, create a full-featured table. this
@@ -297,40 +256,4 @@ func addDiceParseResultForFlatAndInlineTables(tbl *table.Table) {
 	dp := make([]*dice.ParseResult, 1, 1)
 	dp[0] = dpr
 	tbl.Definition.DiceParsed = dp
-}
-
-//converts a go map to a lua LTable
-func toLuaLTable(goMap map[string]string) *lua.LTable {
-	ltbl := &lua.LTable{}
-	for k, v := range goMap {
-		ltbl.RawSetString(k, lua.LString(v))
-	}
-	return ltbl
-}
-
-//converts a lua LTable to a go map
-func fromLuaTable(scriptName string, lState *lua.LState, lVal lua.LValue) map[string]string {
-
-	//do we really have an LTable in the passed LValue?
-	if lVal.Type() != lua.LTTable {
-		return createErrorMap(scriptName,
-			"script does not contain required return table variable 'rettbl'")
-	}
-	luaTable := lVal.(*lua.LTable)
-
-	mp := make(map[string]string)
-
-	luaTable.ForEach(func(k lua.LValue, v lua.LValue) {
-		key := k.String()
-		val := v.String()
-		mp[key] = val
-	})
-	return mp
-}
-
-//helper to uniformly return errors during script execution
-func createErrorMap(scriptName, details string) map[string]string {
-	errMap := make(map[string]string)
-	errMap["Script-Error"] = details
-	return errMap
 }

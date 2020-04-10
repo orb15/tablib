@@ -10,27 +10,24 @@ import (
 	res "tablib/tableresult"
 	"tablib/util"
 	"time"
-
-	lua "github.com/yuin/gopher-lua"
 )
 
 const (
 	//max number of table subcalls before we punt on possible recursion
-	//this should ultimately be a config param
-	defaultMaxCallDepth = 10
+	//TODO: this should ultimately be a config param
+	defaultMaxCallDepth = 25
 )
 
 type workPackage struct {
-	repo      TableRepository
+	nameSvc   nameResolver
 	table     *table.Table
-	script    *lua.FunctionProto
 	operation string
 	count     int
 	pickCount int
 }
 
 type executionEngine struct {
-	callDepth int //number of table calls - prevent malicious or inadvertent recursion with a hammer
+	callDepth int //number of table calls - prevent malicious or inadvertent circular refs with a hammer
 	rnd       *rand.Rand
 }
 
@@ -45,10 +42,19 @@ func (ee *executionEngine) execute(wp *workPackage, tr *res.TableResult) {
 	for i := 1; i <= wp.count; i++ {
 		generated := ee.executeInternal(wp, tr)
 		tr.AddResult(generated)
-		ee.callDepth = 0 //reset calldepth for next execution
+		ee.callDepth = 0 //calldepth resets since this is a new roll/pick attempt
 	}
 }
 
+func (ee *executionEngine) executeScript(wp *workPackage) {
+
+}
+
+//this functionis recursively called to expand table refs. It is called initially
+//based on a roll or pick request, but if that request's result contains a
+//tableref, this function is called to fulfill that reference. This process
+//happes recursively until all tablerefs are resolved. See 'expandAllTableRefs()
+//below to see how this function is called recursively
 func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult) string {
 	//TODO: eventually may want to call a goroutine and use contexts for timeout
 	//but skip that for now and see how things perform. Might be important in public
@@ -62,13 +68,12 @@ func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult)
 	case table.OpPick:
 		tr.AddLog(fmt.Sprintf("Executing Pick %d on table: %s ", wp.pickCount, wp.table.Definition.Name))
 		generated = ee.executePick(wp, tr)
-	case "script":
-		tr.AddLog(fmt.Sprintf("NOOP: Executing Script: FIXMYNAME"))
 	}
 
 	return generated
 }
 
+//picks n unique rows from a flat table
 func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) string {
 
 	//check call depth - will rolling here push us over?
@@ -117,6 +122,7 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 	return ee.expandAllRefs(buf, wp, tr) //recurse in case this generate table refs
 }
 
+//randomly selects a row from a flat or range table
 func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) string {
 
 	//check call depth - will rolling here push us over?
@@ -139,6 +145,7 @@ func (ee *executionEngine) executeRoll(wp *workPackage, tr *res.TableResult) str
 	return ee.expandAllRefs(buf, wp, tr)
 }
 
+//works in conjunction with executeInternal to recursively expand all tablerefs
 func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.TableResult) string {
 
 	//buf may need tablerefs expanded, check that first
@@ -155,8 +162,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 
 		//need to recurse here so set up the new work package's common elements
 		nextWp := &workPackage{
-			repo:   wp.repo,
-			script: nil,
+			nameSvc: wp.nameSvc,
 		}
 		safeAndSane := false //sanity checker - programming mistake trap
 
@@ -165,7 +171,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.count = 1 //always roll once per external tables
 			nextWp.operation = table.OpRoll
-			tableRef, err := wp.repo.TableForName(extMatches[1])
+			tableRef, err := wp.nameSvc.tableForName(extMatches[1])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
 				return ""
@@ -178,7 +184,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			nextWp.count = 1 //always roll once on internal tables
 			nextWp.operation = table.OpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
-			tableRef, err := wp.repo.TableForName(tablename)
+			tableRef, err := wp.nameSvc.tableForName(tablename)
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
 				return ""
@@ -191,7 +197,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			nextWp.pickCount, _ = strconv.Atoi(extMatches[1]) //no err per regex
 			nextWp.count = 1                                  //always roll once on pick requests
 			nextWp.operation = table.OpPick
-			tableRef, err := wp.repo.TableForName(extMatches[2])
+			tableRef, err := wp.nameSvc.tableForName(extMatches[2])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
 				return ""
@@ -290,7 +296,9 @@ func (ee *executionEngine) rollDice(dpr []*dice.ParseResult) int {
 	return total
 }
 
-//determine if we have had too many table refs and need to punt
+//determine if we have had too many table refs and need to punt. This is a
+//brute force block to circular table dependencies (malicious or otherwise) as
+//only so many roll or picks are allowed before we stop resolving lookups
 func (ee *executionEngine) checkCallDepth(tr *res.TableResult) bool {
 	ee.callDepth++
 	if ee.callDepth > defaultMaxCallDepth {

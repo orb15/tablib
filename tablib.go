@@ -2,7 +2,6 @@ package tablib
 
 import (
 	"sync"
-	"tablib/table"
 	"tablib/tableresult"
 	"tablib/validate"
 )
@@ -11,12 +10,11 @@ import (
 type TableRepository interface {
 	AddLuaScript(scriptName, luaScript string) error
 	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
-	Execute(scriptName string) (map[string]string, error)
+	Execute(scriptName string) map[string]string
 	List(objectName string) (string, error)
 	Pick(tableName string, count int) *tableresult.TableResult
 	Roll(tableName string, count int) *tableresult.TableResult
 	Search(namePredicate string, tags []string) []*SearchResult
-	TableForName(name string) (*table.Table, error)
 }
 
 //SearchResult holds information about each object discovered during a search

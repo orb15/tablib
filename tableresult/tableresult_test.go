@@ -19,3 +19,19 @@ func TestAddLog_shouldAddToLog(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestAddLog_shouldAddToResult(t *testing.T) {
+	tr := NewTableResult()
+	tr.AddResult("1")
+	tr.AddResult("two")
+
+	if len(tr.Result) != 2 {
+		t.Fail()
+	}
+	if tr.Result[0] != "1" {
+		t.Fail()
+	}
+	if tr.Result[1] != "two" {
+		t.Fail()
+	}
+}

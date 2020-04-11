@@ -134,11 +134,13 @@ func (cr *concreteTableRepo) List(objectName string) (string, error) {
 	defer cr.lock.RUnlock()
 	return "", nil
 }
+
 func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*SearchResult {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 	return make([]*SearchResult, 0)
 }
+
 func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresult.TableResult {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
@@ -184,11 +186,17 @@ func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.Tabl
 	return tr
 }
 
-func (cr *concreteTableRepo) Execute(scriptName string) map[string]string {
+func (cr *concreteTableRepo) Execute(scriptName string,
+	callback ParamSpecificationRequestCallback) map[string]string {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 
-	return executeScript(scriptName, cr, cr)
+	//TODO: consider that we are locking the mutex here and then potentially
+	//utilizing the callback here to fetch further info from the caller. This could
+	//lead to a state where the caller fails to return and therefore the RLock is
+	//never released (maybe if the caller thread dies?). Not sure what to do about it
+	//yet
+	return executeScript(scriptName, cr, cr, callback)
 }
 
 //tableForName returns the underlying table for give table name

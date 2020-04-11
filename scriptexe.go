@@ -6,7 +6,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository) map[string]string {
+func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository,
+	callback ParamSpecificationRequestCallback) map[string]string {
+
 	//set up a new lua VM
 	//TODO: limit call stack and repository sizes, prevent use of lua modules
 	//that allow access to OS, filesys or other dangerous crap
@@ -33,27 +35,39 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 			fmt.Sprintf("fail to load loading compiled script: %s", err))
 	}
 
-	//TODO: here we need to call well-known lua function to get info about
-	//the params the lua main() code needs to do its job. Once we get these, this
-	//method (Execute) will need to utilize a callback function (needs passed in)
-	//to request the param values from the caller of this lib.
-
 	//For sanity sake, all lua functions should take and return a single well-known
 	//type so we always know the size of the argument list being passed or
-	//returned. A map[string]string is sufficent and simple to handle
+	//returned. A map[string]string is sufficent and simple to handle so that is
+	//what we are using
 
-	ldm := make(map[string]string) //hack: make up params to pass for now
-	ldm["p1"] = "v1"
-	ldm["p2"] = "v2"
+	//retrieve the well-known param map from lua - this holds parameters the
+	//lua program requires to operate
+	luaParams := lState.GetGlobal("params")
+	if luaParams.Type() == lua.LTTable { //process only if present and well-formed in lua
+		paramMap := fromLuaTable(scriptName, lState, luaParams)
+		pspecs := paramSpecificationsFromMap(paramMap)
+		responseMap := callback(pspecs)
 
-	//call the well-known function "main" which is the 'main' for our lua script
-	if err := lState.CallByParam(lua.P{
-		Fn:      lState.GetGlobal("main"),
-		NRet:    0,
-		Protect: true,
-	}, toLuaLTable(ldm)); err != nil {
-		if err != nil {
-			return createErrorMap(scriptName, fmt.Sprintf("executing main(): %s", err))
+		//call the well-known function "main" which is the 'main' for our lua script
+		if err := lState.CallByParam(lua.P{
+			Fn:      lState.GetGlobal("main"),
+			NRet:    0,
+			Protect: true,
+		}, toLuaLTable(responseMap)); err != nil {
+			if err != nil {
+				return createErrorMap(scriptName, fmt.Sprintf("executing main(): %s", err))
+			}
+		}
+	} else {
+		//call the well-known function "main" which is the 'main' for our lua script
+		if err := lState.CallByParam(lua.P{
+			Fn:      lState.GetGlobal("main"),
+			NRet:    0,
+			Protect: true,
+		}); err != nil {
+			if err != nil {
+				return createErrorMap(scriptName, fmt.Sprintf("executing main(): %s", err))
+			}
 		}
 	}
 

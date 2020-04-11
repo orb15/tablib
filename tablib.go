@@ -10,7 +10,7 @@ import (
 type TableRepository interface {
 	AddLuaScript(scriptName, luaScript string) error
 	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
-	Execute(scriptName string) map[string]string
+	Execute(scriptName string, callback ParamSpecificationRequestCallback) map[string]string
 	List(objectName string) (string, error)
 	Pick(tableName string, count int) *tableresult.TableResult
 	Roll(tableName string, count int) *tableresult.TableResult

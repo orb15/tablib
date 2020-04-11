@@ -112,6 +112,8 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string) error {
 	if err != nil {
 		return err
 	}
+
+	//from a read of the source this is pretty unlikely but catching it anyway
 	proto, err := lua.Compile(astStatements, luaScript)
 	if err != nil {
 		return err
@@ -258,8 +260,9 @@ func extractInlineTables(mainTable *table.Table) []*table.Table {
 //just as if they were ranged tables
 func addDiceParseResultForFlatAndInlineTables(tbl *table.Table) {
 	dpr := &dice.ParseResult{
-		Count:   1,
-		DieType: len(tbl.RawContent),
+		Count:    1,
+		DieType:  len(tbl.RawContent),
+		Operator: "none",
 	}
 	dp := make([]*dice.ParseResult, 1, 1)
 	dp[0] = dpr

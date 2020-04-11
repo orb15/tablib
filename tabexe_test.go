@@ -1,5 +1,12 @@
 package tablib
 
+/*
+These tests focus on the table executable portions of the repo like
+rolling on and picking from tables. Because of my lack of desire to write mocks
+(and ensure I am using interfaces everywhere I could be to make this doable),
+some of these tests are more like integration tests than unit tests.
+*/
+
 import (
 	"testing"
 

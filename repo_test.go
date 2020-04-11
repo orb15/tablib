@@ -340,6 +340,52 @@ func TestTableForName_shouldNotFetchMissingTable(t *testing.T) {
 	}
 }
 
+func TestAddTable_shouldFailToRollOn0Rolls(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+  content:
+    - item 1 - {#1}
+  inline:
+    - id: 1
+      content:
+        - Inline 1`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Roll("TestTable_Flat", 0)
+	if len(tr.Log) != 1 {
+		t.Error("Unexpected processing of a 0 roll request")
+	}
+	if tr.Log[0] != "Attempt to roll 0 or fewer times on table: TestTable_Flat" {
+		t.Error("0 roll reqest bad log message")
+	}
+}
+
+func TestAddTable_shouldFailToRollOnNegativeRolls(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+  content:
+    - item 1 - {#1}
+  inline:
+    - id: 1
+      content:
+        - Inline 1`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Roll("TestTable_Flat", -1)
+	if len(tr.Log) != 1 {
+		t.Error("Unexpected processing of a -1 roll request")
+	}
+	if tr.Log[0] != "Attempt to roll 0 or fewer times on table: TestTable_Flat" {
+		t.Error("0 roll reqest bad log message")
+	}
+}
+
 func TestScriptForName_shouldFetchScript(t *testing.T) {
 	lua := `
   print("dlrow olleh")

@@ -3,7 +3,6 @@ package tableresult
 //TableResult holds the final result of a table run
 type TableResult struct {
 	Result []string
-	Data   map[string]string
 	Log    []string
 }
 
@@ -11,7 +10,6 @@ type TableResult struct {
 func NewTableResult() *TableResult {
 	tr := &TableResult{
 		Result: make([]string, 0, 1),
-		Data:   make(map[string]string),
 		Log:    make([]string, 0, 1),
 	}
 	return tr

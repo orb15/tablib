@@ -39,6 +39,13 @@ func newExecutionEngine() *executionEngine {
 }
 
 func (ee *executionEngine) execute(wp *workPackage, tr *res.TableResult) {
+
+	//quick check on sanity
+	if wp.count > defaultMaxCallDepth {
+		tr.AddLog(fmt.Sprintf("Too many rolls requested, max is: %d", defaultMaxCallDepth))
+		return
+	}
+
 	for i := 1; i <= wp.count; i++ {
 		generated := ee.executeInternal(wp, tr)
 		tr.AddResult(generated)
@@ -46,11 +53,7 @@ func (ee *executionEngine) execute(wp *workPackage, tr *res.TableResult) {
 	}
 }
 
-func (ee *executionEngine) executeScript(wp *workPackage) {
-
-}
-
-//this functionis recursively called to expand table refs. It is called initially
+//this function is recursively called to expand table refs. It is called initially
 //based on a roll or pick request, but if that request's result contains a
 //tableref, this function is called to fulfill that reference. This process
 //happes recursively until all tablerefs are resolved. See 'expandAllTableRefs()
@@ -174,7 +177,8 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			tableRef, err := wp.nameSvc.tableForName(extMatches[1])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
-				return ""
+				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))
+				return sb.String()
 			}
 			nextWp.table = tableRef
 			safeAndSane = true
@@ -187,7 +191,8 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			tableRef, err := wp.nameSvc.tableForName(tablename)
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
-				return ""
+				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))
+				return sb.String()
 			}
 			nextWp.table = tableRef
 			safeAndSane = true
@@ -200,7 +205,8 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			tableRef, err := wp.nameSvc.tableForName(extMatches[2])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
-				return ""
+				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))
+				return sb.String()
 			}
 			nextWp.table = tableRef
 			safeAndSane = true
@@ -209,8 +215,9 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 		//should never happen but check anyway - if we fail here, tests and
 		//table parsing logic have gone wrong - fix yer code!
 		if !safeAndSane {
-			tr.AddLog(fmt.Sprintf("Unexpected table ref. This should NEVER happen: %s", bufParts[1]))
-			return ""
+			msg := fmt.Sprintf("Unexpected table ref. This should NEVER happen: %s", bufParts[1])
+			tr.AddLog(msg)
+			return msg
 		}
 
 		//recurse to expand the first ref found in bufParts

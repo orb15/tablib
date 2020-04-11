@@ -148,6 +148,11 @@ func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresu
 	defer cr.lock.RUnlock()
 
 	tr := tableresult.NewTableResult()
+
+	if execsDesired <= 0 {
+		tr.AddLog(fmt.Sprintf("Attempt to roll 0 or fewer times on table: %s", tableName))
+	}
+
 	tbl, found := cr.tableStore[tableName]
 	if !found {
 		tr.AddLog(fmt.Sprintf("Table: %s does not exist", tableName))

@@ -6,6 +6,12 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+const (
+	wellKnownLuaMainFunc    = "main"
+	wellKnownLuaParamTable  = "params"
+	wellKnownLuaReturnTable = "results"
+)
+
 func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository,
 	callback ParamSpecificationRequestCallback) map[string]string {
 
@@ -22,17 +28,17 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 	//fetch the precompiled lua script by name
 	scriptData, err := nameSvc.scriptForName(scriptName)
 	if err != nil {
-		createErrorMap(scriptName, fmt.Sprintf("%s", err))
+		return createErrorMap(scriptName, fmt.Sprintf("%s", err))
 	}
 
-	//prep the lua script - all this does is store the precompiled code
-	//in lState and await our call to lua functions it defines
+	//execute the lua script
 	luafunc := lState.NewFunctionFromProto(scriptData)
 	lState.Push(luafunc)
 	err = lState.PCall(0, lua.MultRet, nil)
+	//unsure how this could fail but trapping it here
 	if err != nil {
 		return createErrorMap(scriptName,
-			fmt.Sprintf("fail to load loading compiled script: %s", err))
+			fmt.Sprintf("failed to execute compiled script: %s", err))
 	}
 
 	//For sanity sake, all lua functions should take and return a single well-known
@@ -42,15 +48,22 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 
 	//retrieve the well-known param map from lua - this holds parameters the
 	//lua program requires to operate
-	luaParams := lState.GetGlobal("params")
+	luaParams := lState.GetGlobal(wellKnownLuaParamTable)
 	if luaParams.Type() == lua.LTTable { //process only if present and well-formed in lua
 		paramMap := fromLuaTable(scriptName, lState, luaParams)
 		pspecs := paramSpecificationsFromMap(paramMap)
+
+		//pass the lua params to the callback function - the caller of this tab
+		//needs to respond to this param request with a map of key:values that are
+		//where key is the param name and value is the chosen value of those avail
+
+		//TODO: consider doing this in a go routine to timeout if the caller does
+		//not respond
 		responseMap := callback(pspecs)
 
-		//call the well-known function "main" which is the 'main' for our lua script
+		//call the lua main
 		if err := lState.CallByParam(lua.P{
-			Fn:      lState.GetGlobal("main"),
+			Fn:      lState.GetGlobal(wellKnownLuaMainFunc),
 			NRet:    0,
 			Protect: true,
 		}, toLuaLTable(responseMap)); err != nil {
@@ -61,7 +74,7 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 	} else {
 		//call the well-known function "main" which is the 'main' for our lua script
 		if err := lState.CallByParam(lua.P{
-			Fn:      lState.GetGlobal("main"),
+			Fn:      lState.GetGlobal(wellKnownLuaMainFunc),
 			NRet:    0,
 			Protect: true,
 		}); err != nil {
@@ -72,7 +85,7 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 	}
 
 	//retrieve the well-known return value from lua
-	retval := lState.GetGlobal("rettbl")
+	retval := lState.GetGlobal(wellKnownLuaReturnTable)
 	retmap := fromLuaTable(scriptName, lState, retval)
 
 	return retmap

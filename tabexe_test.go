@@ -74,7 +74,7 @@ func TestRoll_shouldMultiRollAsExpectedFlat(t *testing.T) {
 func TestRoll_shouldRollAsExpectedRange(t *testing.T) {
 	yml := `
   definition:
-    name: TestTable_Flat
+    name: TestTable_Range
     type: range
     roll: 1d4
     note: this is an optional note
@@ -83,7 +83,7 @@ func TestRoll_shouldRollAsExpectedRange(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	tr := repo.Roll("TestTable_Flat", 1)
+	tr := repo.Roll("TestTable_Range", 1)
 	if len(tr.Result) != 1 {
 		t.Error("Unexpected result count")
 	}
@@ -98,7 +98,7 @@ func TestRoll_shouldRollAsExpectedRange(t *testing.T) {
 func TestRoll_shouldMultiRollAsExpectedRange(t *testing.T) {
 	yml := `
   definition:
-    name: TestTable_Flat
+    name: TestTable_Range
     type: range
     roll: 1d4
     note: this is an optional note
@@ -107,7 +107,7 @@ func TestRoll_shouldMultiRollAsExpectedRange(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	tr := repo.Roll("TestTable_Flat", 3)
+	tr := repo.Roll("TestTable_Range", 3)
 	if len(tr.Result) != 3 {
 		t.Error("Unexpected result count")
 	}
@@ -218,7 +218,7 @@ func TestRoll_shouldRollAsExpectedRangeToFlatRef(t *testing.T) {
 	}
 }
 
-func TestRoll_shouldFailtoExpandBadTableRef(t *testing.T) {
+func TestRoll_shouldFailtoExpandBadRollTableRef(t *testing.T) {
 	ymlf := `
   definition:
     name: TestTable_Flat
@@ -251,6 +251,39 @@ func TestRoll_shouldFailtoExpandBadTableRef(t *testing.T) {
 	}
 }
 
+func TestRoll_shouldFailtoExpandBadPickTableRef(t *testing.T) {
+	ymlf := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - "flat item 1"`
+
+	ymlr := `
+  definition:
+    name: TestTable_Range
+    type: range
+    roll: 1d4
+    note: this is an optional note
+  content:
+    - "{1-4}range item 1 - {1!TestTable_Flat1}"`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(ymlf))
+	repo.AddTable([]byte(ymlr))
+	tr := repo.Roll("TestTable_Range", 1)
+	if len(tr.Result) != 1 {
+		t.Error("Unexpected result count")
+	}
+	if tr.Result[0] != "range item 1 -  --BADREF: {1!TestTable_Flat1}--" {
+		t.Error("Wrong result from table")
+	}
+	if len(tr.Log) != 3 {
+		t.Error("Wrong Log info captured")
+	}
+}
+
 func TestRoll_shouldFailOnMissingTable(t *testing.T) {
 	yml := `
   definition:
@@ -272,7 +305,7 @@ func TestRoll_shouldFailOnMissingTable(t *testing.T) {
 }
 
 //if this test hangs, the depth counter code is borked
-func TestRoll_shouldPreventInfiniteSelfRecursion(t *testing.T) {
+func TestRoll_shouldPreventInfiniteSelfRecursionOnRoll(t *testing.T) {
 	yml := `
   definition:
     name: TestTable_Flat
@@ -284,7 +317,7 @@ func TestRoll_shouldPreventInfiniteSelfRecursion(t *testing.T) {
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
 	repo.Roll("TestTable_Flat", 1)
-	t.Log("Self recursion test PASS")
+	t.Log("Roll self recursion test PASS")
 }
 
 //if this test hangs, the depth counter code is borked
@@ -353,6 +386,308 @@ func TestRoll_shouldFailFastOnTooHighRollCount(t *testing.T) {
 	}
 	if !strings.HasPrefix(tr.Log[0], "Too many rolls requested, max is") {
 		t.Error("Log message missing")
+	}
+}
+
+func TestPick_shouldPickAsExpected(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1
+    - item 2`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Pick("TestTable_Flat", 1)
+	if len(tr.Result) != 1 {
+		t.Error("Pick not returing proper amount of data")
+	}
+	if len(tr.Log) != 1 {
+		t.Error("Pick not logging properly")
+	}
+	if tr.Result[0] != "item 1" && tr.Result[0] != "item 2" {
+		t.Error("Pick returned invalid result")
+	}
+}
+
+func TestPick_shouldMultiPickAsExpected(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1
+    - item 2
+    - item 3`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Pick("TestTable_Flat", 2)
+	if len(tr.Result) != 1 {
+		t.Error("Pick not returing proper amount of data")
+	}
+	if len(tr.Log) != 1 {
+		t.Error("Pick not logging properly")
+	}
+
+	//ensure results are true pick
+	parts := strings.Split(tr.Result[0], ",")
+	if len(parts) != 2 {
+		t.Error("Did not pick the desired number")
+	}
+	if parts[0] == parts[1] {
+		t.Error("Pick was not unique")
+	}
+}
+
+func TestPickDelim_shouldUseProvidedDelim(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1, is fine
+    - item 2, is better
+    - item 3, is best`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.PickWithDelimiter("TestTable_Flat", 2, "|")
+	if len(tr.Result) != 1 {
+		t.Error("Pick not returing proper amount of data")
+	}
+	if len(tr.Log) != 1 {
+		t.Error("Pick not logging properly")
+	}
+
+	//ensure results are true pick
+	parts := strings.Split(tr.Result[0], "|")
+	if len(parts) != 2 {
+		t.Error("Did not pick the desired number")
+	}
+	if parts[0] == parts[1] {
+		t.Error("Pick was not unique")
+	}
+}
+
+func TestPick_shouldPickAllAndWarn1(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1
+    - item 2`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Pick("TestTable_Flat", 2)
+	if len(tr.Result) != 1 {
+		t.Error("Pick not returing proper amount of data")
+	}
+	if len(tr.Log) != 2 {
+		t.Error("Pick not logging properly")
+	}
+	if tr.Result[0] != "item 1,item 2" {
+		t.Error("Pick returned invalid result")
+	}
+}
+
+func TestPick_shouldPickAllAndWarn2(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1
+    - item 2`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Pick("TestTable_Flat", 3)
+	if len(tr.Result) != 1 {
+		t.Error("Pick not returing proper amount of data")
+	}
+	if len(tr.Log) != 2 {
+		t.Error("Pick not logging properly")
+	}
+	if tr.Result[0] != "item 1,item 2" {
+		t.Error("Pick returned invalid result")
+	}
+}
+
+func TestPick_shouldErrorOnRangeTable(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Range
+    type: range
+    roll: 1d4
+    note: this is an optional note
+  content:
+    - "{1-4}item 1"`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Pick("TestTable_Range", 1)
+	if len(tr.Result) != 1 {
+		t.Error("Unexpected result count")
+	}
+	if tr.Result[0] != "Pick on range table not allowed" {
+		t.Errorf("Result missing error message")
+	}
+	if len(tr.Log) != 2 {
+		t.Error("Wrong Log info captured")
+	}
+	if tr.Log[1] != "Pick requested on ranged table: TestTable_Range" {
+		t.Error("Bad log message")
+	}
+}
+
+func TestPick_shouldFailOnMissingTable(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Pick("TestTable_Flat1", 1)
+	if len(tr.Result) != 0 {
+		t.Error("Unexpected result count")
+	}
+	if len(tr.Log) != 1 {
+		t.Error("Wrong Log info captured")
+	}
+}
+
+//if this test hangs, the depth counter code is borked
+func TestPick_shouldPreventInfiniteSelfRecursionOnPick(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - "item 1: {1!TestTable_Flat}"`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	repo.Roll("TestTable_Flat", 1)
+	t.Log("Pick self recursion test PASS")
+}
+
+func TestRecurse_shouldGenerallyRecurse1(t *testing.T) {
+	yml1 := `
+  definition:
+    name: Flat1
+    type: flat
+    note: this is an optional note
+  content:
+    - "{#1}"
+  inline:
+    - id: 1
+      content:
+        - "Flat1-inline: {@Range1}"`
+
+	yml2 := `
+  definition:
+    name: Range1
+    type: range
+    roll: 1d4
+    note: this is an optional note
+  content:
+    - "{1-4}Range1|{2!Flat2}"`
+
+	yml3 := `
+  definition:
+    name: Flat2
+    type: flat
+    note: this is an optional note
+  content:
+    - Flat2-1
+    - Flat2-2`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml1))
+	repo.AddTable([]byte(yml2))
+	repo.AddTable([]byte(yml3))
+	tr := repo.Roll("Flat1", 1)
+
+	if len(tr.Result) != 1 {
+		t.Error("Unexpected Result count")
+	}
+	if len(tr.Log) != 8 {
+		t.Error("Unexpected Log count")
+	}
+	if !strings.HasPrefix(tr.Result[0], "Flat1-inline: Range1|") {
+		t.Error("First portion of Result is wrong")
+	}
+
+	firstPipe := strings.Index(tr.Result[0], "|")
+	pickString := tr.Result[0][firstPipe+1 : len(tr.Result[0])]
+	if pickString != "Flat2-1,Flat2-2" && pickString != "Flat2-2,Flat2-1" {
+		t.Error("Invalid pick string")
+	}
+}
+
+func TestRecurse_shouldGenerallyMultiRecurse1(t *testing.T) {
+	yml1 := `
+  definition:
+    name: Flat1
+    type: flat
+    note: this is an optional note
+  content:
+    - "Pick from Flat2 by inline: |{#1}| but this is direct: |{1!Flat2}"
+  inline:
+    - id: 1
+      content:
+        - "Flat1-inline: {1!Flat2}"`
+
+	yml2 := `
+  definition:
+    name: Flat2
+    type: flat
+    note: this is an optional note
+  content:
+    - Flat2-1
+    - Flat2-2`
+
+	repo := NewTableRepository()
+	vr, _ := repo.AddTable([]byte(yml1))
+	if !vr.Valid() {
+		t.Error("Invalid")
+	}
+	repo.AddTable([]byte(yml2))
+	tr := repo.Roll("Flat1", 1)
+
+	if len(tr.Result) != 1 {
+		t.Error("Unexpected Result count")
+	}
+	if len(tr.Log) != 6 {
+		t.Error("Unexpected Log count")
+	}
+	if !strings.HasPrefix(tr.Result[0], "Pick from Flat2 by inline: |") {
+		t.Error("First portion of Result is wrong")
+	}
+	pickParts := strings.Split(tr.Result[0], "|")
+	if len(pickParts) != 4 {
+		t.Error("Unexpected output")
+	}
+	if pickParts[1] != "Flat1-inline: Flat2-1" && pickParts[1] != "Flat1-inline: Flat2-2" {
+		t.Error("Bad first pick")
+	}
+	if pickParts[3] != "Flat2-1" && pickParts[3] != "Flat2-2" {
+		t.Error("Bad second pick")
 	}
 }
 

@@ -13,6 +13,7 @@ type TableRepository interface {
 	Execute(scriptName string, callback ParamSpecificationRequestCallback) map[string]string
 	List(objectName string) (string, error)
 	Pick(tableName string, count int) *tableresult.TableResult
+	PickWithDelimiter(tableName string, count int, delim string) *tableresult.TableResult
 	Roll(tableName string, count int) *tableresult.TableResult
 	Search(namePredicate string, tags []string) []*SearchResult
 }

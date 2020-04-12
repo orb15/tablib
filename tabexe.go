@@ -24,6 +24,7 @@ type workPackage struct {
 	operation string
 	count     int
 	pickCount int
+	pickDelim string
 }
 
 type executionEngine struct {
@@ -93,7 +94,7 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 	//if asking for more picks than content, return content and a warning
 	if wp.pickCount >= len(wp.table.RawContent) {
 		tr.AddLog(fmt.Sprintf("Pick %d on table: %s requested but it has only %d entries",
-			wp.count, wp.table.Definition.Name, len(wp.table.RawContent)))
+			wp.pickCount, wp.table.Definition.Name, len(wp.table.RawContent)))
 		return strings.Join(wp.table.RawContent, ",")
 	}
 
@@ -121,7 +122,7 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 			outSlice = append(outSlice, pickSlice[picked].v)
 		}
 	}
-	buf := strings.Join(outSlice, ",")
+	buf := strings.Join(outSlice, wp.pickDelim)
 	return ee.expandAllRefs(buf, wp, tr) //recurse in case this generate table refs
 }
 
@@ -165,7 +166,8 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 
 		//need to recurse here so set up the new work package's common elements
 		nextWp := &workPackage{
-			nameSvc: wp.nameSvc,
+			nameSvc:   wp.nameSvc,
+			pickDelim: wp.pickDelim,
 		}
 		safeAndSane := false //sanity checker - programming mistake trap
 
@@ -189,6 +191,8 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			nextWp.operation = table.OpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
 			tableRef, err := wp.nameSvc.tableForName(tablename)
+			//not sure this can even happen with an inline table after all the
+			//validation done but check for it anyway
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
 				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))

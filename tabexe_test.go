@@ -435,37 +435,6 @@ func TestPick_shouldMultiPickAsExpected(t *testing.T) {
 	}
 
 	//ensure results are true pick
-	parts := strings.Split(tr.Result[0], ",")
-	if len(parts) != 2 {
-		t.Error("Did not pick the desired number")
-	}
-	if parts[0] == parts[1] {
-		t.Error("Pick was not unique")
-	}
-}
-
-func TestPickDelim_shouldUseProvidedDelim(t *testing.T) {
-	yml := `
-  definition:
-    name: TestTable_Flat
-    type: flat
-    note: this is an optional note
-  content:
-    - item 1, is fine
-    - item 2, is better
-    - item 3, is best`
-
-	repo := NewTableRepository()
-	repo.AddTable([]byte(yml))
-	tr := repo.PickWithDelimiter("TestTable_Flat", 2, "|")
-	if len(tr.Result) != 1 {
-		t.Error("Pick not returing proper amount of data")
-	}
-	if len(tr.Log) != 1 {
-		t.Error("Pick not logging properly")
-	}
-
-	//ensure results are true pick
 	parts := strings.Split(tr.Result[0], "|")
 	if len(parts) != 2 {
 		t.Error("Did not pick the desired number")
@@ -494,7 +463,7 @@ func TestPick_shouldPickAllAndWarn1(t *testing.T) {
 	if len(tr.Log) != 2 {
 		t.Error("Pick not logging properly")
 	}
-	if tr.Result[0] != "item 1,item 2" {
+	if tr.Result[0] != "item 1|item 2" {
 		t.Error("Pick returned invalid result")
 	}
 }
@@ -518,7 +487,7 @@ func TestPick_shouldPickAllAndWarn2(t *testing.T) {
 	if len(tr.Log) != 2 {
 		t.Error("Pick not logging properly")
 	}
-	if tr.Result[0] != "item 1,item 2" {
+	if tr.Result[0] != "item 1|item 2" {
 		t.Error("Pick returned invalid result")
 	}
 }
@@ -635,7 +604,7 @@ func TestRecurse_shouldGenerallyRecurse1(t *testing.T) {
 
 	firstPipe := strings.Index(tr.Result[0], "|")
 	pickString := tr.Result[0][firstPipe+1 : len(tr.Result[0])]
-	if pickString != "Flat2-1,Flat2-2" && pickString != "Flat2-2,Flat2-1" {
+	if pickString != "Flat2-1|Flat2-2" && pickString != "Flat2-2|Flat2-1" {
 		t.Error("Invalid pick string")
 	}
 }

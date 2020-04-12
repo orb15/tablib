@@ -16,6 +16,7 @@ const (
 	//max number of table subcalls before we punt on possible recursion
 	//TODO: this should ultimately be a config param
 	defaultMaxCallDepth = 25
+	defaultPickDelim    = "|"
 )
 
 type workPackage struct {
@@ -24,7 +25,6 @@ type workPackage struct {
 	operation string
 	count     int
 	pickCount int
-	pickDelim string
 }
 
 type executionEngine struct {
@@ -95,7 +95,7 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 	if wp.pickCount >= len(wp.table.RawContent) {
 		tr.AddLog(fmt.Sprintf("Pick %d on table: %s requested but it has only %d entries",
 			wp.pickCount, wp.table.Definition.Name, len(wp.table.RawContent)))
-		return strings.Join(wp.table.RawContent, ",")
+		return strings.Join(wp.table.RawContent, defaultPickDelim)
 	}
 
 	//create a tracking slice to track picked values
@@ -122,7 +122,7 @@ func (ee *executionEngine) executePick(wp *workPackage, tr *res.TableResult) str
 			outSlice = append(outSlice, pickSlice[picked].v)
 		}
 	}
-	buf := strings.Join(outSlice, wp.pickDelim)
+	buf := strings.Join(outSlice, defaultPickDelim)
 	return ee.expandAllRefs(buf, wp, tr) //recurse in case this generate table refs
 }
 
@@ -166,8 +166,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 
 		//need to recurse here so set up the new work package's common elements
 		nextWp := &workPackage{
-			nameSvc:   wp.nameSvc,
-			pickDelim: wp.pickDelim,
+			nameSvc: wp.nameSvc,
 		}
 		safeAndSane := false //sanity checker - programming mistake trap
 

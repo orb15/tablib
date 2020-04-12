@@ -23,9 +23,8 @@ func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 	//function as it is exposed to lua and the value is a pointer to an LGFunction
 	//(a function type specified in the gopher-lua lib)
 	exportedGoFuncs := map[string]lua.LGFunction{
-		"roll":      lm.rollOnTable,
-		"pick":      lm.pickFromTable,
-		"delimPick": lm.pickFromTableDelim,
+		"roll": lm.rollOnTable,
+		"pick": lm.pickFromTable,
 	}
 
 	//make certain functions available to lua
@@ -58,57 +57,9 @@ func (lm *luaModule) rollOnTable(lState *lua.LState) int {
 
 	//Actually roll on the table specified in the lua script
 	tr := lm.repo.Roll(tblName, 1) //always roll once in scripts
-
-	//push the result of the roll back to lua
-	lState.Push(lua.LString(tr.Result[0]))
-	return 1
-}
-
-//pickFromTableDelim is the lua-visible wrapper function for
-//TableRepository.PickWithDelimiter()
-func (lm *luaModule) pickFromTableDelim(lState *lua.LState) int {
-
-	//confirm arg is a string /int/string then convert to Go types
-	argCount := lState.GetTop() //gets count of args passed onto stack
-	if argCount != 3 {
-		msg := fmt.Sprintf(
-			"ERROR: pick(tableName, count) requires 3 arguments received: %d", argCount)
-		lState.Push(lua.LString(msg))
-		return 1
+	if len(tr.Result) == 0 {       //problem during execution - tack on message
+		tr.AddResult(fmt.Sprintf("ERROR: The roll failed. Does the table: %s exist?", tblName))
 	}
-
-	tblNameInLuaFmt := lState.Get(1) //lua uses 1-based arrays - get first argument
-	tblNameLuaType := tblNameInLuaFmt.Type()
-	if tblNameLuaType != lua.LTString {
-		msg := fmt.Sprintf(
-			"ERROR: pick(tableName, count, delim), tablename must be a string, received type: %s", tblNameLuaType)
-		lState.Push(lua.LString(msg))
-		return 1
-	}
-	tblName := lState.ToString(1)
-
-	countInLuaFmt := lState.Get(2) //lua uses 1-based arrays - get 2nd argument
-	countLuaType := countInLuaFmt.Type()
-	if countLuaType != lua.LTNumber {
-		msg := fmt.Sprintf(
-			"ERROR: pick(tableName, count, delim), count must be an integer, received type: %s", tblNameLuaType)
-		lState.Push(lua.LString(msg))
-		return 1
-	}
-	count := lState.ToInt(2)
-
-	delimInLuaFmt := lState.Get(1) //lua uses 1-based arrays - get first argument
-	delimLuaType := delimInLuaFmt.Type()
-	if delimLuaType != lua.LTString {
-		msg := fmt.Sprintf(
-			"ERROR: pick(tableName, count, delim), delim must be a string, received type: %s", tblNameLuaType)
-		lState.Push(lua.LString(msg))
-		return 1
-	}
-	delim := lState.ToString(3)
-
-	//Actually roll on the table specified in the lua script
-	tr := lm.repo.PickWithDelimiter(tblName, count, delim)
 
 	//push the result of the roll back to lua
 	lState.Push(lua.LString(tr.Result[0]))
@@ -146,6 +97,9 @@ func (lm *luaModule) pickFromTable(lState *lua.LState) int {
 
 	//Actually roll on the table specified in the lua script
 	tr := lm.repo.Pick(tblName, count)
+	if len(tr.Result) == 0 { //problem during execution - tack on message
+		tr.AddResult(fmt.Sprintf("ERROR: The pick failed. Does the table: %s exist?", tblName))
+	}
 
 	//push the result of the roll back to lua
 	lState.Push(lua.LString(tr.Result[0]))

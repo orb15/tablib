@@ -171,20 +171,11 @@ func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresu
 }
 
 func (cr *concreteTableRepo) Pick(tableName string, count int) *tableresult.TableResult {
-	return cr.PickWithDelimiter(tableName, count, "")
-}
-
-func (cr *concreteTableRepo) PickWithDelimiter(tableName string, count int,
-	delim string) *tableresult.TableResult {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 
-	//comma is default delim
-	if delim == "" {
-		delim = ","
-	}
-
 	tr := tableresult.NewTableResult()
+
 	tbl, found := cr.tableStore[tableName]
 	if !found {
 		tr.AddLog(fmt.Sprintf("Table: %s does not exist", tableName))
@@ -197,7 +188,6 @@ func (cr *concreteTableRepo) PickWithDelimiter(tableName string, count int,
 		operation: table.OpPick,
 		count:     1,
 		pickCount: count,
-		pickDelim: delim,
 	}
 	exeng := newExecutionEngine()
 	exeng.execute(wp, tr)

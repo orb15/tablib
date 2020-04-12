@@ -50,7 +50,7 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 	//lua program requires to operate
 	luaParams := lState.GetGlobal(wellKnownLuaParamTable)
 	if luaParams.Type() == lua.LTTable { //process only if present and well-formed in lua
-		paramMap := fromLuaTable(scriptName, lState, luaParams)
+		paramMap := fromLuaTable(scriptName, lState, luaParams.(*lua.LTable))
 		pspecs := paramSpecificationsFromMap(paramMap)
 
 		//pass the lua params to the callback function - the caller of this tab
@@ -85,8 +85,14 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 	}
 
 	//retrieve the well-known return value from lua
-	retval := lState.GetGlobal(wellKnownLuaReturnTable)
-	retmap := fromLuaTable(scriptName, lState, retval)
+	luaRetval := lState.GetGlobal(wellKnownLuaReturnTable)
+	var retmap map[string]string
+	if luaRetval.Type() == lua.LTTable { //process only if present and well-formed in lua
+		retmap = fromLuaTable(scriptName, lState, luaRetval.(*lua.LTable))
+	} else {
+		retmap = createErrorMap(scriptName,
+			fmt.Sprintf("missing the required execution results table: '%s'", wellKnownLuaReturnTable))
+	}
 
 	return retmap
 }
@@ -101,14 +107,7 @@ func toLuaLTable(goMap map[string]string) *lua.LTable {
 }
 
 //converts a lua LTable to a go map
-func fromLuaTable(scriptName string, lState *lua.LState, lVal lua.LValue) map[string]string {
-
-	//do we really have an LTable in the passed LValue?
-	if lVal.Type() != lua.LTTable {
-		return createErrorMap(scriptName,
-			"script does not contain required return table variable 'rettbl'")
-	}
-	luaTable := lVal.(*lua.LTable)
+func fromLuaTable(scriptName string, lState *lua.LState, luaTable *lua.LTable) map[string]string {
 
 	mp := make(map[string]string)
 

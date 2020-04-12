@@ -623,3 +623,93 @@ func TestExecute_shouldFailIfPickCalledBadTable(t *testing.T) {
 		t.Error("Missing expected error message")
 	}
 }
+
+//the prupose of this test is to perform operations typically found in the
+//expected lua code since the lua VM here is intended to have limited
+//functionality as a general purpose software VM. Specifically, certain lua
+//modeules from the core library are excluded  and this test is to assure
+//lua can still fulfill its role in this tighted security environment. If this
+//test fails, it means that the lua modules allowed in the VM are too restrictive
+//or alternately, the thing attempted in lua is currently deemed too unsafe
+func TestExecute_moduleCompatibilityTest(t *testing.T) {
+	yml := `
+  definition:
+    name: Icecream_Flavors
+    type: flat
+    note: this is an optional note
+  content:
+    - chocolate
+    - vanilla
+    - strawberry`
+
+	lua := `
+  local t = require("tables")
+
+	params = {}
+  params["scoops"] = "2|1|3"
+	params["favorite"] = "random|chocolate|vanilla|strawberry"
+
+	results = {}
+	local scoop1 = ""
+	local scoop2 = ""
+	local scoop3 = ""
+
+  function main(goData)
+
+		if goData["favorite"] == "random" then
+		  scoop1 = t.roll("Icecream_Flavors")
+		  if goData["scoops"] == "2" then
+				scoop2 = t.roll("Icecream_Flavors")
+			end
+			if goData["scoops"] == "3" then
+				scoop2 = t.roll("Icecream_Flavors")
+				scoop3 = t.roll("Icecream_Flavors")
+			end
+    else
+		  scoop1 = goData["favorite"]
+			if goData["scoops"] == "2" then
+				scoop2 = goData["favorite"]
+			end
+			if goData["scoops"] == "3" then
+				scoop2 = goData["favorite"]
+				scoop3 = goData["favorite"]
+			end
+		end
+
+		results["scoop1"] = scoop1
+		results["scoop2"] = scoop2
+		results["scoop3"] = scoop3
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	repo.AddLuaScript("test", lua)
+	mp := repo.Execute("test", DefaultParamSpecificationCallback)
+	t.Log(mp)
+
+	if len(mp) != 3 {
+		t.Error("Invalid script results")
+	}
+	val1, found := mp["scoop1"]
+	if !found {
+		t.Error("Missing expected val1")
+	}
+	if val1 != "chocolate" && val1 != "vanilla" && val1 != "strawberry" {
+		t.Error("Val1 bad data")
+	}
+	val2, found := mp["scoop2"]
+	if !found {
+		t.Error("Missing expected val1")
+	}
+	if val2 != "chocolate" && val2 != "vanilla" && val2 != "strawberry" && val2 != "" {
+		t.Error("Val2 bad data")
+	}
+	val3, found := mp["scoop3"]
+	if !found {
+		t.Error("Missing expected val1")
+	}
+	if val3 != "chocolate" && val3 != "vanilla" && val3 != "strawberry" && val3 != "" {
+		t.Error("Val3 bad data")
+	}
+}

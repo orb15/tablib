@@ -199,11 +199,6 @@ func (cr *concreteTableRepo) Execute(scriptName string,
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
 
-	//TODO: consider that we are locking the mutex here and then potentially
-	//utilizing the callback here to fetch further info from the caller. This could
-	//lead to a state where the caller fails to return and therefore the RLock is
-	//never released (maybe if the caller thread dies?). Not sure what to do about it
-	//yet
 	return executeScript(scriptName, cr, cr, callback)
 }
 

@@ -14,8 +14,8 @@ import (
 
 const (
 	//max number of table subcalls before we punt on possible recursion
-	//TODO: this should ultimately be a config param
-	defaultMaxCallDepth = 25
+	//TODO: these should ultimately be a config param
+	defaultMaxCallDepth = 100
 	defaultPickDelim    = "|"
 )
 

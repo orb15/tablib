@@ -2,6 +2,7 @@ package tablib
 
 import (
 	"fmt"
+	"time"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -10,16 +11,43 @@ const (
 	wellKnownLuaMainFunc    = "main"
 	wellKnownLuaParamTable  = "params"
 	wellKnownLuaReturnTable = "results"
+
+	defaultcallbackWaitTimeSeconds = 30 //TODO: this should ultimately be a config param
 )
 
 func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository,
 	callback ParamSpecificationRequestCallback) map[string]string {
 
-	//set up a new lua VM
-	//TODO: limit call stack and repository sizes, prevent use of lua modules
-	//that allow access to OS, filesys or other dangerous crap
-	lState := lua.NewState()
+	//set up a new lua VM. Limit the lua basic lib to essential functions in
+	//an attempt to reduce the scope of malicious scripts. This is actually really
+	//hard to do and the modules here are still condsidered dangerously unsafe but
+	//are neccessary if lu ais to be used at all. Note that clever attackers
+	//can easily work around these limitations.
+
+	//See http://lua-users.org/wiki/SandBoxes for info on the relative futility of
+	//trying to make lua VMs both saafe and functional
+
+	//TODO: limit call stack and repository sizes - maybe?
+	lState := lua.NewState(lua.Options{SkipOpenLibs: true})
 	defer lState.Close()
+	for _, pair := range []struct {
+		n string
+		f lua.LGFunction
+	}{
+		{lua.LoadLibName, lua.OpenPackage},
+		{lua.BaseLibName, lua.OpenBase},
+		{lua.TabLibName, lua.OpenTable},
+		{lua.MathLibName, lua.OpenMath},
+		{lua.StringLibName, lua.OpenString},
+	} {
+		if err := lState.CallByParam(lua.P{
+			Fn:      lState.NewFunction(pair.f),
+			NRet:    0,
+			Protect: true,
+		}, lua.LString(pair.n)); err != nil {
+			panic(err)
+		}
+	}
 
 	//tell the lua VM about the go code we are exposing to it
 	luaMod := newLuaModule(repo)
@@ -57,9 +85,22 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 		//needs to respond to this param request with a map of key:values that are
 		//where key is the param name and value is the chosen value of those avail
 
-		//TODO: consider doing this in a go routine to timeout if the caller does
-		//not respond
-		responseMap := callback(pspecs)
+		//spin up a routine to allow caller time to respond
+		responseChan := make(chan map[string]string, 1)
+		go func() {
+			responseChan <- callback(pspecs)
+		}()
+
+		//either use the caller's response or use default values
+		//the timeout case does not have a test but has been tested by radically
+		//shortening the time to ensure it works as expected (3 microseconds)
+		var responseMap map[string]string
+		select {
+		case responseMap = <-responseChan:
+			fmt.Println("here")
+		case <-time.After(defaultcallbackWaitTimeSeconds * time.Second):
+			responseMap = DefaultParamSpecificationCallback(pspecs)
+		}
 
 		//call the lua main
 		if err := lState.CallByParam(lua.P{

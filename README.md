@@ -5,7 +5,7 @@
 Tablib is short for "table library".  It is a library to execute an 'extensible random table generation engine' for use in tabletop gaming. Tablib is written in Go and is intended to serve as the backend for web services, desktop applications or to be embedded in other applications needing random table support.
 
 The library offers:
-* Easy-to-use [Table](#tab-ref) descriptors
+* An open source, easy-to-use [Table](#tab-ref) definition language
 * A powerful, robust [API](#api-ref)
 * A Lua script execution [engine](#lua-ref) for more sophisticated needs
 
@@ -36,7 +36,7 @@ func main() {
   repo := NewTableRepository()
 
   //load and validate the YAML file. Provides extensive consistency and
-  //validity reponses not shown here
+  //validity responses not shown here
   repo.AddTable("path/to/icecream.yml")
 
   //roll twice on the specified table and return the values as a slice.
@@ -54,21 +54,21 @@ This code will output something like:
 A random roll on the ice cream table: chocolate
 A random roll on the ice cream table: vanilla
 ```
-Mechanisms are provided for picking a specified number of unique values from a table, for ranged tables (e.g. tables that do not have an equal distribution of results), for tables calling other tables to retrieve data and for tables to declare 'inline tables' when a table's contents needs to be flexible but the flexibility does not warrant the creation of a new table in its own right.
+Mechanisms are provided for picking a specified number of unique values from a table, for ranged or weighted tables (e.g. tables that do not have an equal distribution of results), for tables calling other tables to retrieve data and for tables to declare 'inline tables' when a table's contents needs to be flexible but the flexibility does not warrant the creation of a new table in its own right.
 
 #### Lua Scripting
-Tablib also provides a [Lua](http://www.lua.org/about.html) script execution engine that serves as a powerful tool to generate sophisticated results from the tables and stitch together the results of many table rolls. See the [Lua](#lua-ref) section for more details.
+Tablib also provides a [Lua](http://www.lua.org/about.html) script execution engine that serves as a powerful tool to generate sophisticated results from the tables and stitch together the results of many table rolls. See the [Lua Reference](#lua-ref) section for more details.
 ```
 local t = require("tables")
 
 results {}
 function main()
   results["ice-cream-flavor"] = t.roll("Ice_cream_flavors")
-  results["syrup"] = t.roll("sundae-syrup", 1)
+  results["syrup"] = t.roll("sundae-syrup")
   results["toppings"] = t.pick("sundae-toppings", 3)
 end
 ```
-Tables are loaded into a TableRepository and can be located and accessed with the API:
+Scripts are loaded into a TableRepository and can be located and accessed with the API:
 ```
 package main
 import (

@@ -138,3 +138,26 @@ func TestDefinitionValidation_shouldRejectMissingDice(t *testing.T) {
 	failOnNoErrors(vr, t)
 	equals(vr.ErrorCount(), 1, t)
 }
+
+func TestDefinitionValidation_shouldUniquifyAndLowercaseTags(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable
+    type: range
+    roll: 2d8
+    tags:
+      - test
+      - Test
+      - foo
+      - foO
+      - bar
+  content:
+    - '{1-2}item 1'
+    - '{3-4}item 2'
+    - '{5-6}item 3'`
+
+	tb := tableFromYaml(yml, t)
+	vr := tb.Validate()
+	failOnErrors(vr, t)
+	equals(len(tb.Definition.Tags), 3, t)
+}

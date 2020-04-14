@@ -1,6 +1,9 @@
 package tablib
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"tablib/tableresult"
 	"tablib/validate"
@@ -8,7 +11,7 @@ import (
 
 //TableRepository is a TableRepository for now
 type TableRepository interface {
-	AddLuaScript(scriptName, luaScript string) error
+	AddLuaScript(scriptName, luaScript string, tags []string) error
 	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
 	Execute(scriptName string, callback ParamSpecificationRequestCallback) map[string]string
 	List(objectName string) (string, error)
@@ -24,11 +27,21 @@ type SearchResult struct {
 	Tags []string
 }
 
+func (sr *SearchResult) toFullComparable() string {
+	sort.Strings(sr.Tags)
+	return fmt.Sprintf("%s:%s:%s", sr.Name, sr.Type, strings.Join(sr.Tags, ":"))
+}
+func (sr *SearchResult) toComparable() string {
+	return fmt.Sprintf("%s:%s", sr.Name, sr.Type)
+}
+
 //NewTableRepository does what it says on the tin
 func NewTableRepository() TableRepository {
 	return &concreteTableRepo{
-		tableStore:  make(map[string]*tableData),
-		scriptStore: make(map[string]*scriptData),
-		lock:        &sync.RWMutex{},
+		tableStore:      make(map[string]*tableData),
+		scriptStore:     make(map[string]*scriptData),
+		tagSearchCache:  make(map[string][]*SearchResult),
+		nameSearchCache: make([]*SearchResult, 0),
+		lock:            &sync.RWMutex{},
 	}
 }

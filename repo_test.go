@@ -251,7 +251,7 @@ func TestAddLuaScript_shouldAddValidLuaToRepo(t *testing.T) {
   `
 
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua)
+	err := cr.AddLuaScript("test", lua, nil)
 	failOnErr("Not not accept Lua script", err, t)
 
 	//access the script directly
@@ -279,7 +279,7 @@ func TestAddLuaScript_shouldNotAddUnparsableLuaToRepo(t *testing.T) {
   `
 
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua)
+	err := cr.AddLuaScript("test", lua, nil)
 	if err == nil {
 		t.Error("Failed to error on unparsable lua")
 	}
@@ -391,7 +391,7 @@ func TestScriptForName_shouldFetchScript(t *testing.T) {
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua)
+	err := cr.AddLuaScript("test", lua, nil)
 	failOnErr("Not not accept Lua script", err, t)
 
 	script, err := cr.scriptForName("test")
@@ -406,7 +406,7 @@ func TestScriptForName_shouldNotFetchMissingScript(t *testing.T) {
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua)
+	err := cr.AddLuaScript("test", lua, nil)
 	failOnErr("Not not accept Lua script", err, t)
 
 	script, err := cr.scriptForName("tset")
@@ -416,6 +416,218 @@ func TestScriptForName_shouldNotFetchMissingScript(t *testing.T) {
 	if script != nil {
 		t.Error("Fetched a non-existant script!?S")
 	}
+}
+
+func TestUpdateTagCache_shouldAddNewTags(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	sr := &SearchResult{Name: "foo", Type: itemTypeTable, Tags: []string{"tag1", "tag2"}}
+
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+
+	if len(cr.tagSearchCache) != 2 {
+		t.Error("Tags not added as expected")
+	}
+	if len(cr.tagSearchCache["tag1"]) != 1 {
+		t.Error("Tag1 not added as expected")
+	}
+	if cr.tagSearchCache["tag1"][0].toFullComparable() != sr.toFullComparable() {
+		t.Error("Tag1 data not added as expected")
+	}
+	if len(cr.tagSearchCache["tag2"]) != 1 {
+		t.Error("Tag2 not added as expected")
+	}
+	if cr.tagSearchCache["tag2"][0].toFullComparable() != sr.toFullComparable() {
+		t.Error("Tag2 data not added as expected")
+	}
+}
+
+func TestUpdateTagCache_shouldAddNetNewTags(t *testing.T) {
+	ymlfoo := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	ymlbar := `
+  definition:
+    name: bar
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag3
+  content:
+    - item 1`
+
+	srfoo := &SearchResult{Name: "foo", Type: itemTypeTable, Tags: []string{"tag1", "tag2"}}
+	srbar := &SearchResult{Name: "bar", Type: itemTypeTable, Tags: []string{"tag1", "tag3"}}
+
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(ymlfoo))
+	cr.AddTable([]byte(ymlbar))
+
+	if len(cr.tagSearchCache) != 3 {
+		t.Error("Tags not added as expected")
+	}
+	if len(cr.tagSearchCache["tag1"]) != 2 {
+		t.Error("Tag1 not added as expected")
+	}
+	if cr.tagSearchCache["tag1"][0].toFullComparable() != srfoo.toFullComparable() {
+		t.Error("Tag1 data not added as expected")
+	}
+	if cr.tagSearchCache["tag1"][1].toFullComparable() != srbar.toFullComparable() {
+		t.Error("Tag1 data not added as expected")
+	}
+	if len(cr.tagSearchCache["tag2"]) != 1 {
+		t.Error("Tag2 not added as expected")
+	}
+	if cr.tagSearchCache["tag2"][0].toFullComparable() != srfoo.toFullComparable() {
+		t.Error("Tag2 data not added as expected")
+	}
+	if len(cr.tagSearchCache["tag3"]) != 1 {
+		t.Error("Tag3 not added as expected")
+	}
+	if cr.tagSearchCache["tag3"][0].toFullComparable() != srbar.toFullComparable() {
+		t.Error("Tag3 data not added as expected")
+	}
+}
+
+func TestUpdateTagCache_shouldRemovePreviousTagsAndDropUnusedTag(t *testing.T) {
+	ymlfoo := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	ymlbar := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+  content:
+    - item 1`
+
+	srbar := &SearchResult{Name: "foo", Type: itemTypeTable, Tags: []string{"tag1"}}
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(ymlfoo))
+	cr.AddTable([]byte(ymlbar))
+
+	if len(cr.tagSearchCache) != 1 {
+		t.Error("Tags not added as expected")
+	}
+	if len(cr.tagSearchCache["tag1"]) != 1 {
+		t.Error("Tag1 not added as expected")
+	}
+	if cr.tagSearchCache["tag1"][0].toFullComparable() != srbar.toFullComparable() {
+		t.Error("Tag1 data not added as expected - foo")
+	}
+	if len(cr.tagSearchCache["tag2"]) != 0 {
+		t.Error("Tag2 not updated as expected")
+	}
+}
+
+func TestUpdateTagCache_shouldRemovePreviousTags(t *testing.T) {
+	ymlfoo := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	ymlbar := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag2
+  content:
+    - item 1`
+
+	ymlgoo := `
+  definition:
+    name: goo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+  content:
+    - item 1`
+
+	srbar := &SearchResult{Name: "foo", Type: itemTypeTable, Tags: []string{"tag2"}}
+	srgoo := &SearchResult{Name: "goo", Type: itemTypeTable, Tags: []string{"tag1"}}
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(ymlfoo))
+	cr.AddTable([]byte(ymlgoo))
+	cr.AddTable([]byte(ymlbar))
+
+	if len(cr.tagSearchCache) != 2 {
+		t.Error("Tags not added as expected")
+	}
+	if len(cr.tagSearchCache["tag1"]) != 1 {
+		t.Error("Tag1 not added as expected")
+	}
+	if cr.tagSearchCache["tag1"][0].toFullComparable() != srgoo.toFullComparable() {
+		t.Error("Tag1 data not added as expected - foo")
+	}
+	if len(cr.tagSearchCache["tag2"]) != 1 {
+		t.Error("Tag2 not updated as expected")
+	}
+	if cr.tagSearchCache["tag2"][0].toFullComparable() != srbar.toFullComparable() {
+		t.Error("Tag2 data not added as expected - foo")
+	}
+}
+
+func TestUpdateTagCache_shouldRemovePreviouslyCachedTags(t *testing.T) {
+	ymlfoo := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	ymlbar := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1`
+
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(ymlfoo))
+	cr.AddTable([]byte(ymlbar))
 }
 
 /* ***********************************************
@@ -436,8 +648,10 @@ func failOnInvalid(msg string, vr *validate.ValidationResult, t *testing.T) {
 
 func newConcreteRepo() *concreteTableRepo {
 	return &concreteTableRepo{
-		tableStore:  make(map[string]*tableData),
-		scriptStore: make(map[string]*scriptData),
-		lock:        &sync.RWMutex{},
+		tableStore:      make(map[string]*tableData),
+		scriptStore:     make(map[string]*scriptData),
+		tagSearchCache:  make(map[string][]*SearchResult),
+		nameSearchCache: make([]*SearchResult, 0),
+		lock:            &sync.RWMutex{},
 	}
 }

@@ -97,7 +97,6 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 		var responseMap map[string]string
 		select {
 		case responseMap = <-responseChan:
-			fmt.Println("here")
 		case <-time.After(defaultcallbackWaitTimeSeconds * time.Second):
 			responseMap = DefaultParamSpecificationCallback(pspecs)
 		}

@@ -2,6 +2,7 @@ package table
 
 import (
 	"fmt"
+	"strings"
 	"tablib/dice"
 	"tablib/util"
 	"tablib/validate"
@@ -9,10 +10,11 @@ import (
 
 //DefinitionPart holds the table definition or header
 type DefinitionPart struct {
-	Name      string `yaml:"name"`
-	Note      string `yaml:"note"`
-	TableType string `yaml:"type"`
-	Roll      string `yaml:"roll"`
+	Name      string   `yaml:"name"`
+	Note      string   `yaml:"note"`
+	TableType string   `yaml:"type"`
+	Roll      string   `yaml:"roll"`
+	Tags      []string `yanl:"tags"`
 
 	DiceParsed []*dice.ParseResult
 }
@@ -43,4 +45,21 @@ func (t *Table) validateDefinition(vr *validate.ValidationResult) {
 			t.Definition.DiceParsed = parseResults
 		}
 	}
+
+	//unique and lc all tags
+	t.processTags()
+}
+
+//force all tags to lower case, be unique
+func (t *Table) processTags() {
+	tagMap := make(map[string]struct{})
+	for _, t := range t.Definition.Tags {
+		tag := strings.ToLower(t)
+		tagMap[tag] = struct{}{}
+	}
+	tagList := make([]string, 0, len(tagMap))
+	for k := range tagMap {
+		tagList = append(tagList, k)
+	}
+	t.Definition.Tags = tagList
 }

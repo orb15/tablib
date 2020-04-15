@@ -32,7 +32,7 @@ type concreteTableRepo struct {
 	tableStore      map[string]*tableData
 	scriptStore     map[string]*scriptData
 	tagSearchCache  map[string][]*SearchResult
-	nameSearchCache []*SearchResult
+	nameSearchCache map[string]*SearchResult
 	lock            *sync.RWMutex
 }
 
@@ -101,7 +101,7 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationRes
 	cr.updateTagCache(fullName, itemTypeTable, tbl.Definition.Tags)
 
 	//update the name cache
-	cr.updateNameCache(fullName, itemTypeTable, tbl.Definition.Tags)
+	cr.addToNameCache(fullName, itemTypeTable, tbl.Definition.Tags)
 
 	//put the valid table in the repo
 	cr.tableStore[fullName] = &tableData{
@@ -144,6 +144,12 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string, tags []s
 	//lock the repo now since we will write to it
 	cr.lock.Lock()
 	defer cr.lock.Unlock()
+
+	//update the tag cache with the new script info
+	cr.updateTagCache(scriptName, itemTypeScript, tags)
+
+	//update the name cache
+	cr.addToNameCache(scriptName, itemTypeScript, tags)
 
 	//store the Lua script bytecode in the repo
 	cr.scriptStore[scriptName] = &scriptData{
@@ -249,6 +255,7 @@ func (cr *concreteTableRepo) scriptForName(name string) (*lua.FunctionProto, err
 	return scriptData.parsedScript, nil
 }
 
+//see note on removeFromTagCache for info on what is happening here
 func (cr *concreteTableRepo) updateTagCache(fullName string, itemType string, tags []string) {
 	//first, see if this object exists - if it does, note the previously cached tags
 	var prevCachedTags []string
@@ -293,6 +300,11 @@ func (cr *concreteTableRepo) updateTagCache(fullName string, itemType string, ta
 	cr.addToTagCache(sr)
 }
 
+//carefully pull a tagged item from the cache - this gets hard because we support reloading
+//tables and scripts after lib initialization, so if a table or script is reloaded
+//and the tags have changed, we need to update the cache to reflect the new state to
+//keep the changed table or script from appearing in tag-based searches to which it no
+//longer belongs
 func (cr *concreteTableRepo) removeFromTagCache(sr *SearchResult, oldTags []string) {
 	for _, oldTag := range oldTags {
 		cachedItems, found := cr.tagSearchCache[oldTag]
@@ -330,8 +342,19 @@ func (cr *concreteTableRepo) addToTagCache(sr *SearchResult) {
 	}
 }
 
-func (cr *concreteTableRepo) updateNameCache(fullName string, itemType string, tags []string) {
-
+func (cr *concreteTableRepo) addToNameCache(fullName string, itemType string, tags []string) {
+	//name is the key identifier (well name and type) for an object. When an
+	//object arrives via one of the Add API's, it is hard to know if we are actually
+	//getting an old object with a new name or just a new object. This function
+	//assumes we are always getting a new object. Note that if we get the same-named
+	//object and type, the repo and its caches will just be overwritten by the new
+	//data
+	sr := &SearchResult{
+		Name: fullName,
+		Type: itemType,
+		Tags: tags,
+	}
+	cr.nameSearchCache[sr.toComparable()] = sr
 }
 
 //for each inline table in a table, create a full-featured table. this

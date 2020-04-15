@@ -628,6 +628,69 @@ func TestUpdateTagCache_shouldRemovePreviouslyCachedTags(t *testing.T) {
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(ymlfoo))
 	cr.AddTable([]byte(ymlbar))
+
+	if len(cr.tagSearchCache) != 0 {
+		t.Error("Tags not removed as expected")
+	}
+}
+
+func TestUpdateTagCache_ensureNamesAloneDoNotCauseImproperCacheChanges(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	lua := `
+  print("dlrow olleh)
+  `
+	sryml := &SearchResult{Name: "foo", Type: itemTypeTable, Tags: []string{"tag1", "tag2"}}
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua, nil)
+
+	if len(cr.tagSearchCache) != 2 {
+		t.Error("Tags not removed as expected")
+	}
+	if len(cr.tagSearchCache["tag1"]) != 1 {
+		t.Error("tag1 cache has unexpected or missing data")
+	}
+	if cr.tagSearchCache["tag1"][0].toFullComparable() != sryml.toFullComparable() {
+		t.Error("Table removed from tag1 cache unexpectedly")
+	}
+	if len(cr.tagSearchCache["tag2"]) != 1 {
+		t.Error("tag2 cache has unexpected or missing data")
+	}
+	if cr.tagSearchCache["tag2"][0].toFullComparable() != sryml.toFullComparable() {
+		t.Error("Table removed from tag2 cache unexpectedly")
+	}
+}
+
+func TestUpdateTagCache_ensureScriptTagChangesCaptureProperly(t *testing.T) {
+	lua := `
+	print("dlrow olleh")
+	`
+
+	sryml := &SearchResult{Name: "foo", Type: itemTypeScript, Tags: []string{"tag1"}}
+	cr := newConcreteRepo()
+	cr.AddLuaScript("foo", lua, []string{"tag1", "tag2"})
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+
+	if len(cr.tagSearchCache) != 1 {
+		t.Error("Tags not removed as expected")
+	}
+	if len(cr.tagSearchCache["tag1"]) != 1 {
+		t.Error("tag1 cache has unexpected or missing data")
+	}
+	if cr.tagSearchCache["tag1"][0].toFullComparable() != sryml.toFullComparable() {
+		t.Error("Table removed from tag1 cache unexpectedly")
+	}
 }
 
 /* ***********************************************
@@ -651,7 +714,7 @@ func newConcreteRepo() *concreteTableRepo {
 		tableStore:      make(map[string]*tableData),
 		scriptStore:     make(map[string]*scriptData),
 		tagSearchCache:  make(map[string][]*SearchResult),
-		nameSearchCache: make([]*SearchResult, 0),
+		nameSearchCache: make(map[string]*SearchResult),
 		lock:            &sync.RWMutex{},
 	}
 }

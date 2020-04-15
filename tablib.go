@@ -41,7 +41,7 @@ func NewTableRepository() TableRepository {
 		tableStore:      make(map[string]*tableData),
 		scriptStore:     make(map[string]*scriptData),
 		tagSearchCache:  make(map[string][]*SearchResult),
-		nameSearchCache: make([]*SearchResult, 0),
+		nameSearchCache: make(map[string]*SearchResult),
 		lock:            &sync.RWMutex{},
 	}
 }

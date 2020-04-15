@@ -693,6 +693,132 @@ func TestUpdateTagCache_ensureScriptTagChangesCaptureProperly(t *testing.T) {
 	}
 }
 
+func TestList_tableIsListedWhenRequested(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	lua := `
+  print("dlrow olleh")
+  `
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	res, err := cr.List("foo", "table")
+	if err != nil {
+		t.Error("Unexpected error during List")
+	}
+	if res != yml {
+		t.Error("Returned listing does not match expected value")
+	}
+}
+
+func TestList_scriptIsListedWhenRequested(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	lua := `
+  print("dlrow olleh")
+  `
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	res, err := cr.List("foo", "script")
+	if err != nil {
+		t.Error("Unexpected error during List")
+	}
+	if res != lua {
+		t.Error("Returned listing does not match expected value")
+	}
+}
+
+func TestList_errorWhenTableDoesNotExist(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	lua := `
+  print("dlrow olleh")
+  `
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	_, err := cr.List("bar", "table")
+	if err == nil {
+		t.Error("Did not receive expected error")
+	}
+}
+
+func TestList_errorWhenScriptDoesNotExist(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	lua := `
+  print("dlrow olleh")
+  `
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	_, err := cr.List("bar", "script")
+	if err == nil {
+		t.Error("Did not receive expected error")
+	}
+}
+
+func TestList_errorWhenTypeDoesNotExist(t *testing.T) {
+	yml := `
+  definition:
+    name: foo
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag2
+  content:
+    - item 1`
+
+	lua := `
+  print("dlrow olleh")
+  `
+	cr := newConcreteRepo()
+	cr.AddTable([]byte(yml))
+	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	_, err := cr.List("foo", "bar")
+	if err == nil {
+		t.Error("Did not receive expected error")
+	}
+}
+
 /* ***********************************************
 * Test Helpers
 * ***********************************************/

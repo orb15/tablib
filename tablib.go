@@ -14,7 +14,7 @@ type TableRepository interface {
 	AddLuaScript(scriptName, luaScript string, tags []string) error
 	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
 	Execute(scriptName string, callback ParamSpecificationRequestCallback) map[string]string
-	List(objectName string) (string, error)
+	List(name string, itemType string) (string, error)
 	Pick(tableName string, count int) *tableresult.TableResult
 	Roll(tableName string, count int) *tableresult.TableResult
 	Search(namePredicate string, tags []string) ([]*SearchResult, error)

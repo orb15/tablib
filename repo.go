@@ -163,10 +163,26 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string, tags []s
 	return nil
 }
 
-func (cr *concreteTableRepo) List(objectName string) (string, error) {
+func (cr *concreteTableRepo) List(name string, itemType string) (string, error) {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
-	return "", nil
+
+	switch itemType {
+	case itemTypeTable:
+		item, found := cr.tableStore[name]
+		if !found {
+			return "", fmt.Errorf("Table: %s does not exist", name)
+		}
+		return item.yamlSource, nil
+	case itemTypeScript:
+		item, found := cr.scriptStore[name]
+		if !found {
+			return "", fmt.Errorf("Script: %s does not exist", name)
+		}
+		return item.scriptSource, nil
+	default:
+		return "", fmt.Errorf("Bad item type: %s", itemType)
+	}
 }
 
 func (cr *concreteTableRepo) Search(namePredicate string, tags []string) ([]*SearchResult, error) {

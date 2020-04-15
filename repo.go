@@ -128,6 +128,9 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string, tags []s
 
 	//not locking repo here so compilation can be multithreaded if caller desires
 
+	//TODO: move tags to be well-known script table we can extract here. This allows
+	//script tags to travel with the script just like table tags do
+
 	//read and compile the lua script
 	reader := strings.NewReader(luaScript)
 	astStatements, err := parse.Parse(reader, luaScript)
@@ -166,10 +169,10 @@ func (cr *concreteTableRepo) List(objectName string) (string, error) {
 	return "", nil
 }
 
-func (cr *concreteTableRepo) Search(namePredicate string, tags []string) []*SearchResult {
+func (cr *concreteTableRepo) Search(namePredicate string, tags []string) ([]*SearchResult, error) {
 	cr.lock.RLock()
 	defer cr.lock.RUnlock()
-	return make([]*SearchResult, 0)
+	return cr.executeSearch(namePredicate, tags)
 }
 
 func (cr *concreteTableRepo) Roll(tableName string, execsDesired int) *tableresult.TableResult {

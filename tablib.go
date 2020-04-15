@@ -17,7 +17,7 @@ type TableRepository interface {
 	List(objectName string) (string, error)
 	Pick(tableName string, count int) *tableresult.TableResult
 	Roll(tableName string, count int) *tableresult.TableResult
-	Search(namePredicate string, tags []string) []*SearchResult
+	Search(namePredicate string, tags []string) ([]*SearchResult, error)
 }
 
 //SearchResult holds information about each object discovered during a search

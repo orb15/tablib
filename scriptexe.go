@@ -81,6 +81,11 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 		paramMap := fromLuaTable(scriptName, lState, luaParams.(*lua.LTable))
 		pspecs := paramSpecificationsFromMap(paramMap)
 
+		//if no callback specified, use the default
+		if callback == nil {
+			callback = DefaultParamSpecificationCallback
+		}
+
 		//pass the lua params to the callback function - the caller of this tab
 		//needs to respond to this param request with a map of key:values that are
 		//where key is the param name and value is the chosen value of those avail

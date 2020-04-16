@@ -298,6 +298,51 @@ func TestExecute_shouldUsePassedParams(t *testing.T) {
 	}
 }
 
+func TestExecute_shouldUseDefaultParamsOnNoCallbackProvided(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - item 1`
+
+	lua := `
+  params = {}
+  params["p1"] = "opt1-1|opt1-2"
+  params["p2"] = "opt2-1|opt2-2"
+
+  results = {}
+  function main(goData)
+  results["p1"] = goData["p1"]
+  results["p2"] = goData["p2"]
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	repo.AddLuaScript("test", lua, nil)
+	mp := repo.Execute("test", nil)
+
+	if len(mp) != 2 {
+		t.Error("Invalid script results")
+	}
+	p1, found := mp["p1"]
+	if !found {
+		t.Error("Missing p1 param value")
+	}
+	if p1 != "opt1-1" {
+		t.Error("p1 parameter value not transmitted properly")
+	}
+	p2, found := mp["p2"]
+	if !found {
+		t.Error("Missing p2 param value")
+	}
+	if p2 != "opt2-1" {
+		t.Error("p2 parameter value not transmitted properly")
+	}
+}
+
 func TestExecute_shouldHandleMissingMainNoParams(t *testing.T) {
 	yml := `
   definition:

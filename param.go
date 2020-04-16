@@ -38,7 +38,7 @@ func paramSpecificationsFromMap(paramMap map[string]string) []*ParamSpecificatio
 
 //ParamSpecificationRequestCallback is a function that will be called by tablib
 //to allow the main program to supply params needed for a lua function
-type ParamSpecificationRequestCallback = func([]*ParamSpecification) map[string]string
+type ParamSpecificationRequestCallback func([]*ParamSpecification) map[string]string
 
 //DefaultParamSpecificationCallback is a convenience function that simply
 //returns the default values in the provided map. This permits users of this

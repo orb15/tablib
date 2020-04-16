@@ -1,9 +1,8 @@
 # Tablib
 
-
-## Overview
 Tablib is short for "table library".  It is a library to execute an 'extensible random table generation engine' for use in tabletop gaming. Tablib is written in Go and is intended to serve as the backend for web services, desktop applications or to be embedded in other applications needing random table support.
 
+## Overview
 The library offers:
 * An open source, easy-to-use [Table](#tab-ref) definition language
 * A powerful, robust [API](#api-ref)
@@ -68,7 +67,7 @@ function main()
   results["toppings"] = t.pick("sundae-toppings", 3)
 end
 ```
-Scripts are loaded into a TableRepository and can be located and accessed with the API:
+Scripts are loaded into a TableRepository and can be located and accessed with the [API](#api-ref):
 ```
 package main
 import (
@@ -82,11 +81,11 @@ func main() {
   repo := NewTableRepository()
 
   //load and validate the YAML file. Provides extensive consistency and validity
-  //reponses not shown here
-  repo.AddLuaScript("path/to/sundae.lua")
+  //responses not shown here
+  repo.AddLuaScript(luaCodeAsString)
 
   //execute the script. Provides graceful error handling and many other features          
-  tabMap := repo.Execute("sundae")
+  tabMap := repo.Execute("sundae", nil)
 
   for key, value := range tabMap {
     fmt.Printf("%s: %s\n", key, value)

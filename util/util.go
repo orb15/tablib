@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	validIdentifierPattern = regexp.MustCompile("^[A-Za-z][a-zA-Z0-9_]+$")
+	validIdentifierPattern = regexp.MustCompile("^[A-Za-z][a-zA-Z0-9_\\-]+$")
 )
 
 //BuildFullName builds the full name of the table or inline table

@@ -40,7 +40,7 @@ func TestIsNotEmpty_shouldAcceptOnNonEmptyString(t *testing.T) {
 }
 
 func TestIsValidIdentifier_shouldAcceptValidIds(t *testing.T) {
-	var ids = []string{"Table_1_2020_kobe", "table_1_2020_kobe", "t1"}
+	var ids = []string{"Table_1_2020_kobe", "table_1_2020_kobe", "t1", "table-1"}
 
 	for _, id := range ids {
 		vr := validate.NewValidationResult()
@@ -52,7 +52,7 @@ func TestIsValidIdentifier_shouldAcceptValidIds(t *testing.T) {
 }
 
 func TestIsValidIdentifier_shouldRejectInvalidIds(t *testing.T) {
-	var ids = []string{"1Table", "", "_Table1", "a?Table", "A"}
+	var ids = []string{"1Table", "", "_Table1", "a,Table", "A", "-table1", "tab le"}
 
 	for _, id := range ids {
 		vr := validate.NewValidationResult()

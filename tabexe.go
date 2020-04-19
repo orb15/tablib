@@ -264,11 +264,10 @@ func (ee *executionEngine) rangeResultFromRoll(wp *workPackage, roll int) string
 		}
 	}
 
-	//we should never get here. This is a fallback message to let us know something
-	//in the code is seriously borked. Something is wrong with the dice roller, dice
-	//parser or the ranged table parser for this to happen. Also check your tests,
-	//something got missed there too
-	msg := fmt.Sprintf("In ee.rangeResultFromRoll, roll of %d exceeded bounds of table: %s",
+	//this can happen if the range table is valid and the dice expression is valid
+	//but the two are not aligned. Example. dice: 3d4 range table handles {1} and {2}
+	//only. In these cases, return a useful message
+	msg := fmt.Sprintf("ERROR: roll of %d exceeded bounds of table: %s",
 		roll, wp.table.Definition.Name)
 	return msg
 }

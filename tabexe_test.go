@@ -95,6 +95,28 @@ func TestRoll_shouldRollAsExpectedRange(t *testing.T) {
 	}
 }
 
+func TestRoll_shouldhandleRangeDiceMismatch(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Range
+    type: range
+    roll: 3d4
+    note: this is an optional note
+  content:
+    - "{1} item 1"
+    - "{2} item 2"`
+
+	repo := NewTableRepository()
+	repo.AddTable([]byte(yml))
+	tr := repo.Roll("TestTable_Range", 1)
+	if len(tr.Result) != 1 {
+		t.Error("Unexpected result count")
+	}
+	if !strings.HasPrefix(tr.Result[0], "ERROR: roll of") {
+		t.Error("Should have received error but did not")
+	}
+}
+
 func TestRoll_shouldMultiRollAsExpectedRange(t *testing.T) {
 	yml := `
   definition:

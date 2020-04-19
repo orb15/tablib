@@ -13,8 +13,8 @@ import (
 type TableRepository interface {
 
 	//AddLuaScript stores the given lua script in the repository.
-	//The script name and the script string itself are mandatory. Tags are optional
-	AddLuaScript(scriptName string, luaScript string, tags []string) error
+	//The script name and the script string itself are mandatory.
+	AddLuaScript(scriptName string, luaScript string) error
 
 	//AddTable stores the given yaml representation of a table in the repository.
 	//

@@ -251,7 +251,7 @@ func TestAddLuaScript_shouldAddValidLuaToRepo(t *testing.T) {
   `
 
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua, nil)
+	err := cr.AddLuaScript("test", lua)
 	failOnErr("Not not accept Lua script", err, t)
 
 	//access the script directly
@@ -279,7 +279,7 @@ func TestAddLuaScript_shouldNotAddUnparsableLuaToRepo(t *testing.T) {
   `
 
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua, nil)
+	err := cr.AddLuaScript("test", lua)
 	if err == nil {
 		t.Error("Failed to error on unparsable lua")
 	}
@@ -391,7 +391,7 @@ func TestScriptForName_shouldFetchScript(t *testing.T) {
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua, nil)
+	err := cr.AddLuaScript("test", lua)
 	failOnErr("Not not accept Lua script", err, t)
 
 	script, err := cr.scriptForName("test")
@@ -406,7 +406,7 @@ func TestScriptForName_shouldNotFetchMissingScript(t *testing.T) {
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
-	err := cr.AddLuaScript("test", lua, nil)
+	err := cr.AddLuaScript("test", lua)
 	failOnErr("Not not accept Lua script", err, t)
 
 	script, err := cr.scriptForName("tset")
@@ -646,14 +646,19 @@ func TestUpdateTagCache_ensureNamesAloneDoNotCauseImproperCacheChanges(t *testin
   content:
     - item 1`
 
-	lua := `
+	lua1 := `
+	--TAGS: tag1
   print("dlrow olleh)
   `
+	lua2 := `
+  print("dlrow olleh)
+  `
+
 	sryml := &SearchResult{Name: "foo", Type: itemTypeTable, Tags: []string{"tag1", "tag2"}}
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml))
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
-	cr.AddLuaScript("foo", lua, nil)
+	cr.AddLuaScript("foo", lua1)
+	cr.AddLuaScript("foo", lua2)
 
 	if len(cr.tagSearchCache) != 2 {
 		t.Error("Tags not removed as expected")
@@ -673,14 +678,19 @@ func TestUpdateTagCache_ensureNamesAloneDoNotCauseImproperCacheChanges(t *testin
 }
 
 func TestUpdateTagCache_ensureScriptTagChangesCaptureProperly(t *testing.T) {
-	lua := `
+	lua1 := `
+	--TAGS: tag1, tag2
+	print("dlrow olleh")
+	`
+	lua2 := `
+	--TAGS: tag1
 	print("dlrow olleh")
 	`
 
 	sryml := &SearchResult{Name: "foo", Type: itemTypeScript, Tags: []string{"tag1"}}
 	cr := newConcreteRepo()
-	cr.AddLuaScript("foo", lua, []string{"tag1", "tag2"})
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua1)
+	cr.AddLuaScript("foo", lua2)
 
 	if len(cr.tagSearchCache) != 1 {
 		t.Error("Tags not removed as expected")
@@ -706,11 +716,12 @@ func TestList_tableIsListedWhenRequested(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag1
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml))
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua)
 	res, err := cr.List("foo", "table")
 	if err != nil {
 		t.Error("Unexpected error during List")
@@ -733,11 +744,12 @@ func TestList_scriptIsListedWhenRequested(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag1
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml))
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua)
 	res, err := cr.List("foo", "script")
 	if err != nil {
 		t.Error("Unexpected error during List")
@@ -760,11 +772,12 @@ func TestList_errorWhenTableDoesNotExist(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag1
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml))
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua)
 	_, err := cr.List("bar", "table")
 	if err == nil {
 		t.Error("Did not receive expected error")
@@ -784,11 +797,12 @@ func TestList_errorWhenScriptDoesNotExist(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag1
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml))
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua)
 	_, err := cr.List("bar", "script")
 	if err == nil {
 		t.Error("Did not receive expected error")
@@ -808,11 +822,12 @@ func TestList_errorWhenTypeDoesNotExist(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag1
   print("dlrow olleh")
   `
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml))
-	cr.AddLuaScript("foo", lua, []string{"tag1"})
+	cr.AddLuaScript("foo", lua)
 	_, err := cr.List("foo", "bar")
 	if err == nil {
 		t.Error("Did not receive expected error")

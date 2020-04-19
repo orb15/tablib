@@ -2,6 +2,7 @@ package tablib
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"tablib/dice"
@@ -44,6 +45,10 @@ type nameResolver interface {
 const (
 	itemTypeTable  = "table"
 	itemTypeScript = "script"
+)
+
+var (
+	scriptTagsPattern = regexp.MustCompile("--TAGS:(.*)")
 )
 
 func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationResult, error) {
@@ -124,12 +129,28 @@ func (cr *concreteTableRepo) AddTable(yamlBytes []byte) (*validate.ValidationRes
 	return validationResults, nil
 }
 
-func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string, tags []string) error {
+func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string) error {
 
 	//not locking repo here so compilation can be multithreaded if caller desires
 
-	//TODO: move tags to be well-known script table we can extract here. This allows
-	//script tags to travel with the script just like table tags do
+	//search the lua script for a --TAGS: ... comment and process the tags
+	//listed there
+	lines := strings.Split(luaScript, "\n")
+	var tags []string
+	for _, l := range lines {
+		if tagsInfo := scriptTagsPattern.FindStringSubmatch(l); tagsInfo != nil {
+			commaSepTags := strings.TrimSpace(tagsInfo[1])
+			dirtyTags := strings.Split(commaSepTags, ",")
+			tags = make([]string, 0, len(dirtyTags))
+			for _, dt := range dirtyTags {
+				cleanTag := strings.TrimSpace(dt)
+				if len(cleanTag) > 0 {
+					tags = append(tags, cleanTag)
+				}
+			}
+			break //only respect the first TAGs comment - others arent needed and why search the whole file
+		}
+	}
 
 	//read and compile the lua script
 	reader := strings.NewReader(luaScript)
@@ -138,7 +159,8 @@ func (cr *concreteTableRepo) AddLuaScript(scriptName, luaScript string, tags []s
 		return err
 	}
 
-	//from a read of the source this is pretty unlikely but catching it anyway
+	//compile the script. Not sure what kind of error could happen here. From
+	//a read of the source this is pretty unlikely but catching it anyway
 	proto, err := lua.Compile(astStatements, luaScript)
 	if err != nil {
 		return err

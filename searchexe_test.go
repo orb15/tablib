@@ -26,6 +26,7 @@ func TestExecuteSearch_shouldReturnFullRepoOnNoParams(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag3
   print("dlrow olleh")
   `
 	sryaml1 := &SearchResult{Name: "test", Type: itemTypeTable, Tags: []string{"tag1"}}
@@ -35,7 +36,7 @@ func TestExecuteSearch_shouldReturnFullRepoOnNoParams(t *testing.T) {
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml1))
 	cr.AddTable([]byte(yml2))
-	cr.AddLuaScript("foo", lua, []string{"tag3"})
+	cr.AddLuaScript("foo", lua)
 	sr, _ := cr.Search("", nil)
 	if len(sr) != 3 {
 		t.Errorf("Unexpected search result length")
@@ -71,6 +72,7 @@ func TestExecuteSearch_shouldReturnTagSearchWithoutDuplicates(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag3
   print("dlrow olleh")
   `
 	sryaml1 := &SearchResult{Name: "test", Type: itemTypeTable, Tags: []string{"tag1", "tag2"}}
@@ -79,7 +81,7 @@ func TestExecuteSearch_shouldReturnTagSearchWithoutDuplicates(t *testing.T) {
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml1))
 	cr.AddTable([]byte(yml2))
-	cr.AddLuaScript("foo", lua, []string{"tag3"})
+	cr.AddLuaScript("foo", lua)
 	sr, _ := cr.Search("", []string{"tag1", "tag2"})
 	if len(sr) != 2 {
 		t.Errorf("Unexpected search result length")
@@ -115,6 +117,7 @@ func TestExecuteSearch_shouldReturnTagSearchWithoutNameConflicts(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag1
   print("dlrow olleh")
   `
 	sryaml1 := &SearchResult{Name: "test", Type: itemTypeTable, Tags: []string{"tag1", "tag2"}}
@@ -123,7 +126,7 @@ func TestExecuteSearch_shouldReturnTagSearchWithoutNameConflicts(t *testing.T) {
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml1))
 	cr.AddTable([]byte(yml2))
-	cr.AddLuaScript("test", lua, []string{"tag1"})
+	cr.AddLuaScript("test", lua)
 	sr, _ := cr.Search("", []string{"tag1"})
 	if len(sr) != 2 {
 		t.Errorf("Unexpected search result length")
@@ -158,6 +161,7 @@ func TestExecuteSearch_shouldSearchByNameOnly(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag3
   print("dlrow olleh")
   `
 	sryaml1 := &SearchResult{Name: "test", Type: itemTypeTable, Tags: []string{"tag1"}}
@@ -166,7 +170,7 @@ func TestExecuteSearch_shouldSearchByNameOnly(t *testing.T) {
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml1))
 	cr.AddTable([]byte(yml2))
-	cr.AddLuaScript("foo", lua, []string{"tag3"})
+	cr.AddLuaScript("foo", lua)
 	sr, _ := cr.Search("test.*", nil)
 	if len(sr) != 2 {
 		t.Errorf("Unexpected search result length")
@@ -201,13 +205,14 @@ func TestExecuteSearch_shouldSearchByNameFailsOnBadRegex(t *testing.T) {
     - item 1`
 
 	lua := `
+	--TAGS: tag3
   print("dlrow olleh")
   `
 
 	cr := newConcreteRepo()
 	cr.AddTable([]byte(yml1))
 	cr.AddTable([]byte(yml2))
-	cr.AddLuaScript("foo", lua, []string{"tag3"})
+	cr.AddLuaScript("foo", lua)
 	_, err := cr.Search("(", nil)
 	if err == nil {
 		t.Error("Did not fail on bad regex as expected")

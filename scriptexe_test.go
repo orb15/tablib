@@ -17,7 +17,7 @@ func TestExecute_shouldErrorOnBadScriptName(t *testing.T) {
   print("hello world")
   `
 	repo := NewTableRepository()
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test1", DefaultParamSpecificationCallback)
 
 	if len(mp) != 1 {
@@ -49,7 +49,7 @@ func TestExecute_shouldExecuteBasicRollNoParams(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 
 	if len(mp) != 1 {
@@ -88,7 +88,7 @@ func TestExecute_shouldExecuteSeveralRollsNoParams(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 
 	if len(mp) != 3 {
@@ -128,7 +128,7 @@ func TestExecute_shouldFailIfRollCalledBadTable(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 
 	if len(mp) != 1 {
@@ -163,7 +163,7 @@ func TestExecute_shouldFailIfRollCalledNoTable(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 
 	if len(mp) != 1 {
@@ -198,7 +198,7 @@ func TestExecute_shouldFailIfRollCalledTooManyArgs(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 
 	if len(mp) != 1 {
@@ -233,7 +233,7 @@ func TestExecute_shouldFailIfRollCalledWrongArgType(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 
 	if len(mp) != 1 {
@@ -271,7 +271,7 @@ func TestExecute_shouldUsePassedParams(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", func([]*ParamSpecification) map[string]string {
 		retmap := make(map[string]string)
 		retmap["p1"] = "opt1-2"
@@ -321,7 +321,7 @@ func TestExecute_shouldUseDefaultParamsOnNoCallbackProvided(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", nil)
 
 	if len(mp) != 2 {
@@ -360,7 +360,7 @@ func TestExecute_shouldHandleMissingMainNoParams(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected error message")
@@ -392,7 +392,7 @@ func TestExecute_shouldHandleMissingMainWithParams(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected error message")
@@ -422,7 +422,7 @@ func TestExecute_shouldHandleMissingResultsTable(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected error message")
@@ -456,7 +456,7 @@ func TestExecute_shouldHandleMissingGoData(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -489,7 +489,7 @@ func TestExecute_shouldHandleBasicPick(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -523,7 +523,7 @@ func TestExecute_shouldHandleBasicMultiPick(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -556,7 +556,7 @@ func TestExecute_shouldFailPickCalledTooManyArgs(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -589,7 +589,7 @@ func TestExecute_shouldFailPickCalledWrongArgType1(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -622,7 +622,7 @@ func TestExecute_shouldFailPickCalledWrongArgType2(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -655,7 +655,7 @@ func TestExecute_shouldFailIfPickCalledBadTable(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	if len(mp) != 1 {
 		t.Error("Missing expected data")
@@ -729,7 +729,7 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua, nil)
+	repo.AddLuaScript("test", lua)
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	t.Log(mp)
 

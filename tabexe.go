@@ -9,6 +9,7 @@ import (
 	"tablib/table"
 	res "tablib/tableresult"
 	"tablib/util"
+	"tablib/validate"
 	"time"
 )
 
@@ -20,11 +21,12 @@ const (
 )
 
 type workPackage struct {
-	nameSvc   nameResolver
-	table     *table.Table
-	operation string
-	count     int
-	pickCount int
+	nameSvc    nameResolver
+	table      *table.Table
+	operation  string
+	count      int
+	pickCount  int
+	diceParsed []*dice.ParseResult
 }
 
 type executionEngine struct {
@@ -72,6 +74,9 @@ func (ee *executionEngine) executeInternal(wp *workPackage, tr *res.TableResult)
 	case table.OpPick:
 		tr.AddLog(fmt.Sprintf("Executing Pick %d on table: %s ", wp.pickCount, wp.table.Definition.Name))
 		generated = ee.executePick(wp, tr)
+	case table.OpDice:
+		tr.AddLog(fmt.Sprintf("Executing dice roll on table: %s ", wp.table.Definition.Name))
+		generated = strconv.Itoa(ee.rollDice(wp.diceParsed))
 	}
 
 	return generated
@@ -172,20 +177,18 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 
 		//what type of table ref do we have - build rest of workPkg...
 		if extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
-			nextWp.count = 1 //always roll once per external tables
-			nextWp.operation = table.OpRoll
 			tableRef, err := wp.nameSvc.tableForName(extMatches[1])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
 				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))
 				return sb.String()
 			}
+			nextWp.count = 1 //always roll once per external tables
+			nextWp.operation = table.OpRoll
 			nextWp.table = tableRef
 			safeAndSane = true
 		}
 		if extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
-			nextWp.count = 1 //always roll once on internal tables
-			nextWp.operation = table.OpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
 			tableRef, err := wp.nameSvc.tableForName(tablename)
 			//not sure this can even happen with an inline table after all the
@@ -195,21 +198,37 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))
 				return sb.String()
 			}
+			nextWp.count = 1 //always roll once on internal tables
+			nextWp.operation = table.OpRoll
 			nextWp.table = tableRef
 			safeAndSane = true
 		}
 		if extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
-			extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1])
-			nextWp.pickCount, _ = strconv.Atoi(extMatches[1]) //no err per regex
-			nextWp.count = 1                                  //always roll once on pick requests
-			nextWp.operation = table.OpPick
 			tableRef, err := wp.nameSvc.tableForName(extMatches[2])
 			if err != nil {
 				tr.AddLog(fmt.Sprintf("%v", err))
 				sb.WriteString(fmt.Sprintf(" --BADREF: %s--", bufParts[1]))
 				return sb.String()
 			}
+			nextWp.pickCount, _ = strconv.Atoi(extMatches[1]) //no err per regex
+			nextWp.count = 1                                  //always roll once on pick requests
+			nextWp.operation = table.OpPick
 			nextWp.table = tableRef
+			safeAndSane = true
+		}
+		if extMatches := table.DiceCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
+			vr := validate.NewValidationResult()
+			dpr := dice.ValidateDiceExpr(extMatches[1], "exec engine", vr)
+			//should never happen with all the validation done but check anyway
+			if !vr.Valid() {
+				tr.AddLog(vr.Errors[0])
+				sb.WriteString(fmt.Sprintf(" --BADDICEREF: %s--", bufParts[1]))
+				return sb.String()
+			}
+			nextWp.diceParsed = dpr
+			nextWp.count = 1 //dice should be rolled once
+			nextWp.operation = table.OpDice
+			nextWp.table = wp.table //we arent switching tables
 			safeAndSane = true
 		}
 

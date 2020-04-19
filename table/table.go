@@ -31,6 +31,9 @@ const (
 	//OpPick represents a pick operation on a table
 	OpPick = "pick"
 
+	//OpDice represents a dice roll
+	OpDice = "dice"
+
 	//TypeFlat represents a flat table
 	TypeFlat = "flat"
 

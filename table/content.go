@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"tablib/dice"
 	"tablib/util"
 	"tablib/validate"
 )
@@ -15,6 +17,8 @@ var (
 	ExternalCalledPattern = regexp.MustCompile("\\{@(.*)\\}")
 	//PickCalledPattern represents syntax for a pick table call
 	PickCalledPattern = regexp.MustCompile("\\{([0-9]+)!(.*)\\}")
+	//DiceCalledPattern represents syntax for a dice evaluation call
+	DiceCalledPattern = regexp.MustCompile("\\{\\$(.*)\\}")
 )
 
 //ValidateContent ensures the content portion of the table is well-formed
@@ -72,6 +76,11 @@ func (t *Table) validateContentTableRefs(entry string, vr *validate.ValidationRe
 		}
 		if matches := PickCalledPattern.FindStringSubmatch(parts[1]); matches != nil {
 			util.IsValidIdentifier(matches[2], parts[1], contentSection, vr)
+			parts, found = util.FindNextTableRef(parts[2])
+			continue
+		}
+		if matches := DiceCalledPattern.FindStringSubmatch(parts[1]); matches != nil {
+			dice.ValidateDiceExpr(matches[1], contentSection, vr)
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
 		}

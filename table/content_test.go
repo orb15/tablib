@@ -62,7 +62,7 @@ func TestContent_shouldAcceptWellformedTablePairs(t *testing.T) {
     - item 3`
 
 	testContent := []string{"{}", "hello{world}", "{}{}{}", "{@Goo}",
-		"{3!Foo}", "{#667}"}
+		"{3!Foo}", "{#667}, {$1d6}"}
 
 	tb := tableFromYaml(yml, t)
 
@@ -84,7 +84,7 @@ func TestContent_shouldRejectMalformedTableRefs(t *testing.T) {
     - item 3`
 
 	testContent := []string{"{}", "{!2}", "{W@rld}", "good{@Ref} then {!Bad}",
-		"Content was {$bad} but then good {#3}", "{3#}"}
+		"Content was {$bad} but then good {#3}", "{3#}", "{1d6$}"}
 
 	tb := tableFromYaml(yml, t)
 
@@ -107,7 +107,8 @@ func TestContent_shouldAcceptWellformedTableRefs(t *testing.T) {
     - item 3`
 
 	testContent := []string{"{@Sloopy}", "{2!Goober}", "good{#3} then {3!Better}",
-		"Content was {#2} but then got {@Better} and {@Better_yet}", "perfectly ok"}
+		"Content was {#2} but then got {@Better} and {@Better_yet}", "perfectly ok",
+		"You found {$1d6 * 100}gp and {$2d4} gems"}
 
 	tb := tableFromYaml(yml, t)
 

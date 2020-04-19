@@ -125,6 +125,32 @@ func TestRoll_shouldMultiRollAsExpectedRange(t *testing.T) {
 	}
 }
 
+func TestDiceRef_shouldResolveDiceAsExpected(t *testing.T) {
+	yml := `
+  definition:
+    name: TestTable_Flat
+    type: flat
+    note: this is an optional note
+  content:
+    - "item 1: {$1d1} {$1d8 * 0}"`
+
+	repo := NewTableRepository()
+	vr, err := repo.AddTable([]byte(yml))
+	if err != nil {
+		t.Error(err)
+	}
+	if !vr.Valid() {
+		t.Error(vr.Errors[0])
+	}
+	tr := repo.Roll("TestTable_Flat", 1)
+	if len(tr.Result) != 1 {
+		t.Error("Unexpected result count")
+	}
+	if tr.Result[0] != "item 1: 1 0" {
+		t.Error("Wrong result from table")
+	}
+}
+
 func TestRoll_shouldRollAsExpectedInlineRef(t *testing.T) {
 	yml := `
   definition:
@@ -616,7 +642,7 @@ func TestRecurse_shouldGenerallyMultiRecurse1(t *testing.T) {
     type: flat
     note: this is an optional note
   content:
-    - "Pick from Flat2 by inline: |{#1}| but this is direct: |{1!Flat2}"
+    - "Pick from Flat2 by inline: |{#1}| but this is direct: |{1!Flat2}| and this is a dice roll: |{$1d1}"
   inline:
     - id: 1
       content:
@@ -642,14 +668,14 @@ func TestRecurse_shouldGenerallyMultiRecurse1(t *testing.T) {
 	if len(tr.Result) != 1 {
 		t.Error("Unexpected Result count")
 	}
-	if len(tr.Log) != 6 {
+	if len(tr.Log) != 7 {
 		t.Error("Unexpected Log count")
 	}
 	if !strings.HasPrefix(tr.Result[0], "Pick from Flat2 by inline: |") {
 		t.Error("First portion of Result is wrong")
 	}
 	pickParts := strings.Split(tr.Result[0], "|")
-	if len(pickParts) != 4 {
+	if len(pickParts) != 6 {
 		t.Error("Unexpected output")
 	}
 	if pickParts[1] != "Flat1-inline: Flat2-1" && pickParts[1] != "Flat1-inline: Flat2-2" {
@@ -657,6 +683,9 @@ func TestRecurse_shouldGenerallyMultiRecurse1(t *testing.T) {
 	}
 	if pickParts[3] != "Flat2-1" && pickParts[3] != "Flat2-2" {
 		t.Error("Bad second pick")
+	}
+	if pickParts[5] != "1" {
+		t.Error("Bad dice eval")
 	}
 }
 

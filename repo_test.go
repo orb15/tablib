@@ -834,6 +834,40 @@ func TestList_errorWhenTypeDoesNotExist(t *testing.T) {
 	}
 }
 
+//the tabexe extensively tests the roller, this just ensures the API
+//is handling things properly
+func TestEvalDiceExpr_shouldReturnExpectedValues(t *testing.T) {
+	data := []*rollTestData{toRTD("1d6", 1, 6)}
+	repo := NewTableRepository()
+
+	for i := 1; i <= 5; i++ {
+		for _, d := range data {
+			total, err := repo.EvaluateDiceExpression(d.expr)
+			if err != nil {
+				t.Error("Unexpected error with valid dice expression")
+			}
+			if total < d.low || total > d.high {
+				t.Errorf("Roll of: %s generated an unexpected result: %d", d.expr, total)
+			}
+		}
+	}
+}
+
+//the tabexe extensively tests the roller, this just ensures the API
+//is handling things properly
+func TestEvalDiceExpr_shouldFailOnBadDiceExpression(t *testing.T) {
+	data := []*rollTestData{toRTD("1d", 1, 6), toRTD("", 1, 6)}
+	repo := NewTableRepository()
+
+	for _, d := range data {
+		_, err := repo.EvaluateDiceExpression(d.expr)
+		if err == nil {
+			t.Error("Did not error as expected on invalid dice result")
+		}
+	}
+
+}
+
 /* ***********************************************
 * Test Helpers
 * ***********************************************/

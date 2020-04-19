@@ -20,7 +20,7 @@ type TableRepository interface {
 	//
 	//If the presnted yaml is not parsable or has other structural issues, an error is raised.
 	//Errors and warnings related to the semantics of the table (e.g. internal consistency
-	//issues) are captured in the returned ValidationResult
+	//issues or table syntax errors) are captured in the returned ValidationResult
 	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
 
 	//Execute executes the named Lua script and returns a map of named output keys and their values.
@@ -31,13 +31,17 @@ type TableRepository interface {
 	//information the script wishes to communicate to the client, like a synthesized or concatenated
 	//result of several tables rolls that have been assembled in the script to produce an overall
 	//meaningful result. If an error occurs in script execution, error information will be returned
-	//in the map in place of the intended result(S).
+	//in the map in place of the intended result(s).
 	//
 	//The callback function is optional. If used, it will be called if the Lua script requests
 	//parameters from the caller. If set to nil, the Lua script will be returned the default
 	//value of each parameter. For more information on the format of Lua scripts and the
 	//use of the callback, see the README documentation.
 	Execute(scriptName string, callback ParamSpecificationRequestCallback) map[string]string
+
+	//EvaluateDiceExpression revaluates a dice expression and returns the result or
+	//an a non-nuil ValidatioNresult if the expression is not valid.
+	EvaluateDiceExpression(diceExpr string) (int, error)
 
 	//List provides the raw string listing of the named table or script.
 	//

@@ -1,6 +1,7 @@
 package tablib
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -270,6 +271,22 @@ func (cr *concreteTableRepo) Execute(scriptName string,
 	defer cr.lock.RUnlock()
 
 	return executeScript(scriptName, cr, cr, callback)
+}
+
+func (cr *concreteTableRepo) EvaluateDiceExpression(diceExpr string) (int, error) {
+
+	//validate and parse the dice
+	if diceExpr == "" {
+		return -1, fmt.Errorf("diceExpr cannot be empty")
+	}
+	vr := validate.NewValidationResult()
+	diceParsed := dice.ValidateDiceExpr(diceExpr, "Evaluate Dice Expression", vr)
+	if !vr.Valid() {
+		return -1, errors.New(vr.Errors[0])
+	}
+
+	//roll
+	return newExecutionEngine().rollDice(diceParsed), nil
 }
 
 //tableForName returns the underlying table for give table name

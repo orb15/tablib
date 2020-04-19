@@ -58,8 +58,7 @@ func ValidateDiceExpr(diceExpr, section string, vr *validate.ValidationResult) [
 		}
 
 		//we are expecting an xdy pattern at this point or we fail to validate
-		if xdyPattern.MatchString(components[0]) {
-			matches := xdyPattern.FindStringSubmatch(components[0])
+		if matches := xdyPattern.FindStringSubmatch(components[0]); matches != nil {
 			count, _ := strconv.Atoi(matches[1])   //no err here as regex protects
 			dieType, _ := strconv.Atoi(matches[2]) //no err here as regex protects
 			pr := &ParseResult{

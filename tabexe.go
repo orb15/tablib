@@ -171,8 +171,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 		safeAndSane := false //sanity checker - programming mistake trap
 
 		//what type of table ref do we have - build rest of workPkg...
-		if table.ExternalCalledPattern.MatchString(bufParts[1]) {
-			extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1])
+		if extMatches := table.ExternalCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
 			nextWp.count = 1 //always roll once per external tables
 			nextWp.operation = table.OpRoll
 			tableRef, err := wp.nameSvc.tableForName(extMatches[1])
@@ -184,8 +183,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			nextWp.table = tableRef
 			safeAndSane = true
 		}
-		if table.InlineCalledPattern.MatchString(bufParts[1]) {
-			extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1])
+		if extMatches := table.InlineCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
 			nextWp.count = 1 //always roll once on internal tables
 			nextWp.operation = table.OpRoll
 			tablename := util.BuildFullName(wp.table.Definition.Name, extMatches[1])
@@ -200,7 +198,7 @@ func (ee *executionEngine) expandAllRefs(buf string, wp *workPackage, tr *res.Ta
 			nextWp.table = tableRef
 			safeAndSane = true
 		}
-		if table.PickCalledPattern.MatchString(bufParts[1]) {
+		if extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1]); extMatches != nil {
 			extMatches := table.PickCalledPattern.FindStringSubmatch(bufParts[1])
 			nextWp.pickCount, _ = strconv.Atoi(extMatches[1]) //no err per regex
 			nextWp.count = 1                                  //always roll once on pick requests

@@ -60,8 +60,7 @@ func (t *Table) ValidateContent(vr *validate.ValidationResult) {
 func (t *Table) validateContentTableRefs(entry string, vr *validate.ValidationResult) {
 	parts, found := util.FindNextTableRef(entry)
 	for found {
-		if ExternalCalledPattern.MatchString(parts[1]) {
-			matches := ExternalCalledPattern.FindStringSubmatch(parts[1])
+		if matches := ExternalCalledPattern.FindStringSubmatch(parts[1]); matches != nil {
 			util.IsValidIdentifier(matches[1], parts[1], contentSection, vr)
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
@@ -71,8 +70,7 @@ func (t *Table) validateContentTableRefs(entry string, vr *validate.ValidationRe
 			parts, found = util.FindNextTableRef(parts[2])
 			continue
 		}
-		if PickCalledPattern.MatchString(parts[1]) {
-			matches := PickCalledPattern.FindStringSubmatch(parts[1])
+		if matches := PickCalledPattern.FindStringSubmatch(parts[1]); matches != nil {
 			util.IsValidIdentifier(matches[2], parts[1], contentSection, vr)
 			parts, found = util.FindNextTableRef(parts[2])
 			continue

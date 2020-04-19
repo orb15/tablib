@@ -73,9 +73,7 @@ func (t *Table) validateInternalInlineConsistency(vr *validate.ValidationResult)
 	idsDefined := make([]string, 0, 1)
 	for _, rc := range t.RawContent {
 
-		if InlineCalledPattern.MatchString(rc) {
-			allMatches := InlineCalledPattern.FindAllStringSubmatch(rc, -1)
-
+		if allMatches := InlineCalledPattern.FindAllStringSubmatch(rc, -1); allMatches != nil {
 			//for each inline table reference, add it to a set of Ids for later comparison
 			for i := 0; i < len(allMatches); i++ {
 				aMatch := allMatches[i][1]

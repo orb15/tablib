@@ -25,8 +25,7 @@ func (t *Table) validateRanges(vr *validate.ValidationResult) {
 	allContent := make([]*rangedContent, 0, 1)
 
 	for _, rc := range t.RawContent {
-		if rangedContentPattern.MatchString(rc) { //{x-y}
-			matches := rangedContentPattern.FindStringSubmatch(rc)
+		if matches := rangedContentPattern.FindStringSubmatch(rc); matches != nil { //{x-y}
 			lowVal, _ := strconv.Atoi(matches[1])  //no err, regex protects this
 			highVal, _ := strconv.Atoi(matches[2]) //no err, regex protects this
 			if lowVal >= highVal {
@@ -39,8 +38,7 @@ func (t *Table) validateRanges(vr *validate.ValidationResult) {
 				Content: splitStrings[1],
 			}
 			allContent = append(allContent, rgCont)
-		} else if fixedContentPattern.MatchString(rc) { // range of a single value eg {x}}
-			matches := fixedContentPattern.FindStringSubmatch(rc)
+		} else if matches := fixedContentPattern.FindStringSubmatch(rc); matches != nil { // range of a single value eg {x}}
 			onlyVal, _ := strconv.Atoi(matches[1]) //no err, regex protects this
 			splitStrings := strings.SplitAfterN(rc, "}", 2)
 			rgCont := &rangedContent{

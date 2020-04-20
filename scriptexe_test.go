@@ -8,6 +8,7 @@ some of these tests are more like integration tests than unit tests.
 */
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -669,6 +670,132 @@ func TestExecute_shouldFailIfPickCalledBadTable(t *testing.T) {
 	}
 }
 
+func TestExecute_shouldExecuteValidDiceExpression(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+  function main(goData)
+  val = t.dice("1d1")
+  results["dice"] = val
+  end
+  `
+
+	lua2 := `
+  local t = require("tables")
+  results = {}
+  function main(goData)
+  val = t.dice("5d6 * 0")
+  results["dice"] = val
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	repo.AddLuaScript("test2", lua2)
+	mp1 := repo.Execute("test1", nil)
+	mp2 := repo.Execute("test2", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val1, found := mp1["dice"]
+	if !found {
+		t.Error("Missing expected value lua1")
+	}
+	if val1 != "1" {
+		t.Error("Unexpected or missing table value lua1")
+	}
+
+	if len(mp2) != 1 {
+		t.Error("Invalid script results lua2")
+	}
+	val2, found := mp2["dice"]
+	if !found {
+		t.Error("Missing expected value lua2")
+	}
+	if val2 != "0" {
+		t.Error("Unexpected or missing table value lua2")
+	}
+}
+
+func TestExecute_shouldReturnErrorValOnInvalidDiceExpression(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+  function main(goData)
+  val = t.dice("1d")
+  results["dice"] = val
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val1, found := mp1["dice"]
+	if !found {
+		t.Error("Missing expected value lua1")
+	}
+	if val1 != strconv.Itoa(badDiceRollInteger) {
+		t.Error("Unexpected or missing table value lua1")
+	}
+}
+
+func TestExecute_shouldFailOnDiceExpressionWrongArgType(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+  function main(goData)
+  val = t.dice(6)
+  results["dice"] = val
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val1, found := mp1["dice"]
+	if !found {
+		t.Error("Missing expected value lua1")
+	}
+	if val1 != strconv.Itoa(badDiceRollInteger) {
+		t.Error("Unexpected or missing table value lua1")
+	}
+}
+
+func TestExecute_shouldFailOnDiceExpressionWrongArgCount(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+  function main(goData)
+  val = t.dice("1d6", 6)
+  results["dice"] = val
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val1, found := mp1["dice"]
+	if !found {
+		t.Error("Missing expected value lua1")
+	}
+	if val1 != strconv.Itoa(badDiceRollInteger) {
+		t.Error("Unexpected or missing table value lua1")
+	}
+}
+
 //the prupose of this test is to perform operations typically found in the
 //expected lua code since the lua VM here is intended to have limited
 //functionality as a general purpose software VM. Specifically, certain lua
@@ -699,6 +826,9 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 	local scoop2 = ""
 	local scoop3 = ""
 
+	local timesToRoll = t.dice("1d3")
+	results["timesRolled"] = timesToRoll
+
   function main(goData)
 
 		if goData["favorite"] == "random" then
@@ -724,16 +854,24 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 		results["scoop1"] = scoop1
 		results["scoop2"] = scoop2
 		results["scoop3"] = scoop3
+
+		for i=1,timesToRoll
+		do
+			results[tostring(i)] = t.roll("Icecream_Flavors")
+		end
   end
   `
 
 	repo := NewTableRepository()
 	repo.AddTable([]byte(yml))
-	repo.AddLuaScript("test", lua)
+	err := repo.AddLuaScript("test", lua)
+	if err != nil {
+		t.Error(err)
+	}
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	t.Log(mp)
 
-	if len(mp) != 3 {
+	if len(mp) < 5 {
 		t.Error("Invalid script results")
 	}
 	val1, found := mp["scoop1"]
@@ -757,4 +895,30 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 	if val3 != "chocolate" && val3 != "vanilla" && val3 != "strawberry" && val3 != "" {
 		t.Error("Val3 bad data")
 	}
+
+	//variable part of test
+	timesString, found := mp["timesRolled"]
+	if !found {
+		t.Error("Missing timesRolled from results map")
+	}
+	timesRolled, err := strconv.Atoi(timesString)
+	if err != nil {
+		t.Error(err)
+	}
+	if timesRolled < 1 || timesRolled > 3 {
+		t.Errorf("TimesRolled outside of bounds: %d", timesRolled)
+	}
+	if len(mp) != 4+timesRolled {
+		t.Error("Wrong length for return results")
+	}
+	for i := 1; i <= timesRolled; i++ {
+		val, found := mp[strconv.Itoa(i)]
+		if !found {
+			t.Errorf("Missing %dth value from variable part of map", i)
+		}
+		if val != "chocolate" && val1 != "vanilla" && val1 != "strawberry" {
+			t.Errorf("the %dth value has bad data: %s", i, val)
+		}
+	}
+
 }

@@ -10,6 +10,10 @@ type luaModule struct {
 	repo TableRepository
 }
 
+const (
+	badDiceRollInteger = -9999
+)
+
 func newLuaModule(r TableRepository) *luaModule {
 	return &luaModule{
 		repo: r,
@@ -25,6 +29,7 @@ func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 	exportedGoFuncs := map[string]lua.LGFunction{
 		"roll": lm.rollOnTable,
 		"pick": lm.pickFromTable,
+		"dice": lm.evalDiceExpression,
 	}
 
 	//make certain functions available to lua
@@ -103,5 +108,35 @@ func (lm *luaModule) pickFromTable(lState *lua.LState) int {
 
 	//push the result of the roll back to lua
 	lState.Push(lua.LString(tr.Result[0]))
+	return 1
+}
+
+//evalDiceExpression is the lua-visible wrapper function for TableRepository.EvaluateDiceExpression()
+func (lm *luaModule) evalDiceExpression(lState *lua.LState) int {
+
+	//confirm arg is a single string and convert it to a Go string
+	argCount := lState.GetTop() //gets count of args passed onto stack
+	if argCount != 1 {
+		lState.Push(lua.LNumber(badDiceRollInteger)) //a cheesy way to indicate an error
+		return 1
+	}
+
+	diceExprInLuaFmt := lState.Get(1) //lua uses 1-based arrays - get first argument
+	diceExprLuaType := diceExprInLuaFmt.Type()
+	if diceExprLuaType != lua.LTString {
+		lState.Push(lua.LNumber(badDiceRollInteger)) //a cheesy way to indicate an error
+		return 1
+	}
+	diceExpr := lState.ToString(1)
+
+	//actually execute the dice expression
+	val, err := lm.repo.EvaluateDiceExpression(diceExpr)
+	if err != nil {
+		lState.Push(lua.LNumber(badDiceRollInteger)) //a cheesy way to indicate an error
+		return 1
+	}
+
+	//push the successful roll back to lua
+	lState.Push(lua.LNumber(val))
 	return 1
 }

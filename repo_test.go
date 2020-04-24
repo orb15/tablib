@@ -868,6 +868,57 @@ func TestEvalDiceExpr_shouldFailOnBadDiceExpression(t *testing.T) {
 
 }
 
+func TestTags_shouldReturnSortedAndUniqueTags(t *testing.T) {
+
+	yml1 := `
+  definition:
+    name: foo1
+    type: flat
+    note: this is an optional note
+    tags:
+      - tag1
+      - tag9
+  content:
+    - item 1`
+
+	yml2 := `
+    definition:
+      name: foo2
+      type: flat
+      note: this is an optional note
+      tags:
+        - tag1
+        - tag2
+    content:
+      - item 1`
+
+	lua1 := `
+	--TAGS: tag1,tag2,tag3,cypher,yodle
+  print("dlrow olleh")
+  `
+	lua2 := `
+	--TAGS: tag3,tag9,tag4
+  print("dlrow olleh")
+  `
+	repo := NewTableRepository()
+	repo.AddLuaScript("lua1", lua1)
+	repo.AddLuaScript("lua2", lua2)
+	repo.AddTable([]byte(yml1))
+	repo.AddTable([]byte(yml2))
+	tags := repo.Tags()
+
+	if len(tags) != 7 {
+		t.Error("Wrong number of tags returned")
+	}
+
+	var expectedOrder = []string{"cypher", "tag1", "tag2", "tag3", "tag4", "tag9", "yodle"}
+	for i := range tags {
+		if tags[i] != expectedOrder[i] {
+			t.Errorf("Unexpected tag or ordering issue. Found: %s Needed: %s", tags[i], expectedOrder[i])
+		}
+	}
+}
+
 /* ***********************************************
 * Test Helpers
 * ***********************************************/

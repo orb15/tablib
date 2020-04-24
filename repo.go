@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"tablib/dice"
@@ -287,6 +288,20 @@ func (cr *concreteTableRepo) EvaluateDiceExpression(diceExpr string) (int, error
 
 	//roll
 	return newExecutionEngine().rollDice(diceParsed), nil
+}
+
+func (cr *concreteTableRepo) Tags() []string {
+	cr.lock.RLock()
+	defer cr.lock.RUnlock()
+
+	tags := make([]string, len(cr.tagSearchCache))
+	i := 0
+	for key := range cr.tagSearchCache {
+		tags[i] = key
+		i++
+	}
+	sort.Strings(tags)
+	return tags
 }
 
 //tableForName returns the underlying table for give table name

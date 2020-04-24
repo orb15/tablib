@@ -71,6 +71,9 @@ type TableRepository interface {
 	//that match the given regex.  Provide both parameters for a narrow search. Note
 	//that in this case, the results are filtered first by tag and then by name.
 	Search(namePredicate string, tags []string) ([]*SearchResult, error)
+
+	//Tags returns an alphabetized list of all tags used by any table or script
+	Tags() []string
 }
 
 //SearchResult holds information about each object discovered during a search

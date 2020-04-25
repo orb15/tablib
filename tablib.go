@@ -18,7 +18,7 @@ type TableRepository interface {
 
 	//AddTable stores the given yaml representation of a table in the repository.
 	//
-	//If the presnted yaml is not parsable or has other structural issues, an error is raised.
+	//If the presented yaml is not parsable or has other structural issues, an error is raised.
 	//Errors and warnings related to the semantics of the table (e.g. internal consistency
 	//issues or table syntax errors) are captured in the returned ValidationResult
 	AddTable(yamlBytes []byte) (*validate.ValidationResult, error)
@@ -40,7 +40,7 @@ type TableRepository interface {
 	Execute(scriptName string, callback ParamSpecificationRequestCallback) map[string]string
 
 	//EvaluateDiceExpression revaluates a dice expression and returns the result or
-	//an a non-nuil ValidatioNresult if the expression is not valid.
+	//an an error f the expression is not valid.
 	EvaluateDiceExpression(diceExpr string) (int, error)
 
 	//List provides the raw string listing of the named table or script.

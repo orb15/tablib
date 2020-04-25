@@ -2,6 +2,8 @@ package tablib
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/yuin/gopher-lua"
 )
@@ -27,12 +29,13 @@ func (lm *luaModule) luaModuleLoader(L *lua.LState) int {
 	//function as it is exposed to lua and the value is a pointer to an LGFunction
 	//(a function type specified in the gopher-lua lib)
 	exportedGoFuncs := map[string]lua.LGFunction{
-		"roll": lm.rollOnTable,
-		"pick": lm.pickFromTable,
-		"dice": lm.evalDiceExpression,
+		"roll":   lm.rollOnTable,
+		"pick":   lm.pickFromTable,
+		"dice":   lm.evalDiceExpression,
+		"concat": lm.concatTableToString,
 	}
 
-	//make certain functions available to lua
+	//make the above functions available to lua via module
 	mod := L.SetFuncs(L.NewTable(), exportedGoFuncs)
 
 	// returns the module
@@ -138,5 +141,44 @@ func (lm *luaModule) evalDiceExpression(lState *lua.LState) int {
 
 	//push the successful roll back to lua
 	lState.Push(lua.LNumber(val))
+	return 1
+}
+
+//concatTableToString is the lua-visible function to efficiently concatinate
+//strings. Lua doesn't offer a string builder nor does it offer graceful and
+//efficient string concatination for several small strings
+func (lm *luaModule) concatTableToString(lState *lua.LState) int {
+
+	//config arg is a single table and convert to a Go map
+	argCount := lState.GetTop() //gets count of args passed onto stack
+	if argCount != 1 {
+		msg := fmt.Sprintf("ERROR: concat(table-of-strings) requires a single table-type parameter, received: %d", argCount)
+		lState.Push(lua.LString(msg))
+		return 1
+	}
+
+	tableInLuaFmt := lState.Get(1) //lua uses 1-based arrays - get first argument
+	var outputString string
+	if tableInLuaFmt.Type() == lua.LTTable {
+		asGoMap := fromLuaTable("unknown-script", lState, tableInLuaFmt.(*lua.LTable))
+
+		//need to sort the keys to preserve order
+		sortedKeys := make([]string, len(asGoMap))
+		for k := range asGoMap {
+			sortedKeys = append(sortedKeys, k)
+		}
+		sort.Strings(sortedKeys)
+
+		var sb strings.Builder
+		for _, key := range sortedKeys {
+			sb.WriteString(asGoMap[key])
+		}
+		outputString = sb.String()
+
+	} else {
+		outputString = fmt.Sprintf("ERROR: concat(table-of-strings), the parameter must be a Lua table, received type: %s", tableInLuaFmt.Type())
+	}
+
+	lState.Push(lua.LString(outputString))
 	return 1
 }

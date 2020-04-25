@@ -796,6 +796,121 @@ func TestExecute_shouldFailOnDiceExpressionWrongArgCount(t *testing.T) {
 	}
 }
 
+func TestExecute_shouldConcatenateProperly(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+	local plsConcat = {}
+	plsConcat[1] = "Col. Mustard"
+	plsConcat[2] = " "
+	plsConcat[3] = "did it in the "
+	plsConcat[4] = "Library with the"
+	plsConcat[5] = " Candlestick"
+	plsConcat[6] = "!\n"
+	plsConcat[7] = "Now is the time for all good men to come to the aid of their country"
+	function main(goData)
+		results["concat"] = t.concat(plsConcat)
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val, found := mp1["concat"]
+	if !found {
+		t.Error("Missing expected value")
+	}
+	if val != "Col. Mustard did it in the Library with the Candlestick!\nNow is the time for all good men to come to the aid of their country" {
+		t.Errorf("String not properly concatenated: %s", val)
+	}
+}
+
+func TestExecute_shouldConcatenateWithLuaNumberTypes(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+	local plsConcat = {}
+	plsConcat[1] = "This is the number 1: "
+	plsConcat[2] = t.dice("1d1")
+	function main(goData)
+		results["concat"] = t.concat(plsConcat)
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val, found := mp1["concat"]
+	if !found {
+		t.Error("Missing expected value")
+	}
+	if val != "This is the number 1: 1" {
+		t.Errorf("String not properly concatenated: %s", val)
+	}
+}
+
+func TestExecute_shouldFailToConcatenateWithBadArgCount(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+	local plsConcat = {}
+	plsConcat[1] = "This is the number 1: "
+	plsConcat[2] = t.dice("1d1")
+	function main(goData)
+		results["concat"] = t.concat(plsConcat, 7)
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val, found := mp1["concat"]
+	if !found {
+		t.Error("Missing expected value")
+	}
+	if !strings.HasPrefix(val, "ERROR: ") {
+		t.Errorf("Did not receive expected error msg: %s", val)
+	}
+}
+
+func TestExecute_shouldFailToConcatenateWithBadArgType(t *testing.T) {
+	lua1 := `
+  local t = require("tables")
+  results = {}
+	plsConcat = "This should fail"
+	function main(goData)
+		results["concat"] = t.concat(plsConcat)
+  end
+  `
+
+	repo := NewTableRepository()
+	repo.AddLuaScript("test1", lua1)
+	mp1 := repo.Execute("test1", nil)
+
+	if len(mp1) != 1 {
+		t.Error("Invalid script results lua1")
+	}
+	val, found := mp1["concat"]
+	if !found {
+		t.Error("Missing expected value")
+	}
+	if !strings.HasPrefix(val, "ERROR: ") {
+		t.Errorf("Did not receive expected error msg: %s", val)
+	}
+}
+
 //the prupose of this test is to perform operations typically found in the
 //expected lua code since the lua VM here is intended to have limited
 //functionality as a general purpose software VM. Specifically, certain lua
@@ -835,25 +950,15 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 		  scoop1 = t.roll("Icecream_Flavors")
 		  if goData["scoops"] == "2" then
 				scoop2 = t.roll("Icecream_Flavors")
+			else
+				scoop2 = "Error: Should have only 2 scoops present"
 			end
-			if goData["scoops"] == "3" then
-				scoop2 = t.roll("Icecream_Flavors")
-				scoop3 = t.roll("Icecream_Flavors")
-			end
-    else
-		  scoop1 = goData["favorite"]
-			if goData["scoops"] == "2" then
-				scoop2 = goData["favorite"]
-			end
-			if goData["scoops"] == "3" then
-				scoop2 = goData["favorite"]
-				scoop3 = goData["favorite"]
-			end
+		else
+			scoop1 = "Error: favorite should always be 'random'"
 		end
 
 		results["scoop1"] = scoop1
 		results["scoop2"] = scoop2
-		results["scoop3"] = scoop3
 
 		for i=1,timesToRoll
 		do
@@ -871,29 +976,22 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 	mp := repo.Execute("test", DefaultParamSpecificationCallback)
 	t.Log(mp)
 
-	if len(mp) < 5 {
+	if len(mp) < 4 || len(mp) > 6 { //scoop1 and scoop2 values, timesRolled, plus 1-3 others
 		t.Error("Invalid script results")
 	}
 	val1, found := mp["scoop1"]
 	if !found {
-		t.Error("Missing expected val1")
+		t.Error("Missing expected scoop1 from map")
 	}
 	if val1 != "chocolate" && val1 != "vanilla" && val1 != "strawberry" {
-		t.Error("Val1 bad data")
+		t.Error("scoop1 bad data")
 	}
 	val2, found := mp["scoop2"]
 	if !found {
-		t.Error("Missing expected val1")
+		t.Error("Missing expected scoop2 from map")
 	}
 	if val2 != "chocolate" && val2 != "vanilla" && val2 != "strawberry" && val2 != "" {
-		t.Error("Val2 bad data")
-	}
-	val3, found := mp["scoop3"]
-	if !found {
-		t.Error("Missing expected val1")
-	}
-	if val3 != "chocolate" && val3 != "vanilla" && val3 != "strawberry" && val3 != "" {
-		t.Error("Val3 bad data")
+		t.Error("scoop2 bad data")
 	}
 
 	//variable part of test
@@ -908,7 +1006,7 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 	if timesRolled < 1 || timesRolled > 3 {
 		t.Errorf("TimesRolled outside of bounds: %d", timesRolled)
 	}
-	if len(mp) != 4+timesRolled {
+	if len(mp) != 3+timesRolled {
 		t.Error("Wrong length for return results")
 	}
 	for i := 1; i <= timesRolled; i++ {
@@ -916,7 +1014,7 @@ func TestExecute_moduleCompatibilityTest(t *testing.T) {
 		if !found {
 			t.Errorf("Missing %dth value from variable part of map", i)
 		}
-		if val != "chocolate" && val1 != "vanilla" && val1 != "strawberry" {
+		if val != "chocolate" && val != "vanilla" && val != "strawberry" {
 			t.Errorf("the %dth value has bad data: %s", i, val)
 		}
 	}

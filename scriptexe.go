@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	wellKnownLuaMainFunc    = "main"
-	wellKnownLuaParamTable  = "params"
-	wellKnownLuaReturnTable = "results"
+	wellKnownLuaMainFunc     = "main"
+	wellKnownLuaParamTable   = "params"
+	wellKnownLuaReturnTable  = "results"
+	wellKnownGoNameForModule = "tables"
 
 	defaultcallbackWaitTimeSeconds = 30 //TODO: this should ultimately be a config param
 )
@@ -25,7 +26,7 @@ func executeScript(scriptName string, nameSvc nameResolver, repo TableRepository
 
 	//tell the lua VM about the go code we are exposing to it
 	luaMod := newLuaModule(repo)
-	lState.PreloadModule("tables", luaMod.luaModuleLoader)
+	lState.PreloadModule(wellKnownGoNameForModule, luaMod.luaModuleLoader)
 
 	//fetch the precompiled lua script by name
 	scriptData, err := nameSvc.scriptForName(scriptName)
